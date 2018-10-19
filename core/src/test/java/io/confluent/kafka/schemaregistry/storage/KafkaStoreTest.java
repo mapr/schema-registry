@@ -280,7 +280,7 @@ public class KafkaStoreTest extends ClusterTestHarness {
     Map<String, String> topicProps = new HashMap<>();
     topicProps.put(TopicConfig.CLEANUP_POLICY_CONFIG, "delete");
 
-    NewTopic topic = new NewTopic(SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC, 1, (short) 1);
+    NewTopic topic = new NewTopic("_schemas", 1, (short) 1);
     topic.configs(topicProps);
 
     Properties props = new Properties();
@@ -300,7 +300,7 @@ public class KafkaStoreTest extends ClusterTestHarness {
     Map<String, String> topicProps = new HashMap<>();
     topicProps.put(TopicConfig.CLEANUP_POLICY_CONFIG, "compact");
 
-    NewTopic topic = new NewTopic(SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC, 3, (short) 1);
+    NewTopic topic = new NewTopic("_schemas", 3, (short) 1);
     topic.configs(topicProps);
 
     Properties props = new Properties();
@@ -327,7 +327,7 @@ public class KafkaStoreTest extends ClusterTestHarness {
 
     ConfigResource configResource = new ConfigResource(
         ConfigResource.Type.TOPIC,
-        SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC
+            "_schemas"
     );
     Map<org.apache.kafka.common.config.ConfigResource, Config> topicConfigs;
     try (AdminClient admin = AdminClient.create(props)) {
@@ -346,7 +346,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testGetAlwaysTrueHostnameVerifierWhenSslEndpointIdentificationAlgorithmIsNotSet() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -361,7 +360,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testGetAlwaysTrueHostnameVerifierWhenSslEndpointIdentificationAlgorithmIsNone() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
     props.put(SchemaRegistryConfig.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "none");
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
@@ -377,7 +375,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testGetAlwaysTrueHostnameVerifierWhenSslEndpointIdentificationAlgorithmIsEmptyString() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
     props.put(SchemaRegistryConfig.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
@@ -393,7 +390,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testGetNullHostnameVerifierWhenSslEndpointIdentificationAlgorithmIsHttps() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
     props.put(SchemaRegistryConfig.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "https");
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
@@ -409,7 +405,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdDifferentSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -438,7 +433,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdSameSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -467,7 +461,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdDifferentDeletedSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -499,7 +492,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdSameDeletedSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -532,7 +524,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerDeleteSubjectKeyNullValue() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -551,7 +542,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerClearSubjectKeyNullValue() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(

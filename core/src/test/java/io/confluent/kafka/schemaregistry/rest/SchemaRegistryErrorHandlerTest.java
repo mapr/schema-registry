@@ -89,8 +89,8 @@ public class SchemaRegistryErrorHandlerTest extends ClusterTestHarness {
   protected Properties getSchemaRegistryProperties() {
     Configuration.setConfiguration(null);
 
-    props.put(SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG, SchemaRegistryConfig
-        .AUTHENTICATION_METHOD_BASIC);
+    props.put(SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG, SchemaRegistryConfig
+        .ENABLE_AUTHORIZATION_DEFAULT);
     props.put(SchemaRegistryConfig.AUTHENTICATION_REALM_CONFIG, "SchemaRegistry");
     props.put(SchemaRegistryConfig.AUTHENTICATION_ROLES_CONFIG, "ccloud");
     try {

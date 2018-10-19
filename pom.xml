@@ -7,7 +7,7 @@
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>rest-utils-parent</artifactId>
-        <version>6.0.0</version>
+        <version>6.0.0.0-mapr-SNAPSHOT</version>
     </parent>
 
     <artifactId>kafka-schema-registry-parent</artifactId>
@@ -22,6 +22,7 @@
         Schema Registry provides a RESTful interface for storing and retrieving versioned Avro
         schemas for use with Kafka.
     </description>
+    <version>6.0.0.0-mapr-SNAPSHOT</version>
 
     <licenses>
         <license>
@@ -71,7 +72,6 @@
     <properties>
         <apache.directory.server.version>2.0.0-M22</apache.directory.server.version>
         <apache.directory.api.version>1.0.0-M33</apache.directory.api.version>
-        <confluent.maven.repo>https://packages.confluent.io/maven/</confluent.maven.repo>
         <exec-maven-plugin.version>1.2.1</exec-maven-plugin.version>
         <podam.version>6.0.2.RELEASE</podam.version>
         <checkstyle.suppressions.location>checkstyle/suppressions.xml</checkstyle.suppressions.location>
@@ -82,13 +82,28 @@
         <wire.version>3.2.2</wire.version>
         <swagger.version>1.6.2</swagger.version>
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
+        <kafka.version>2.6.0.0-mapr-SNAPSHOT</kafka.version>
+        <mapr.streams.version>6.2.0.0-mapr-SNAPSHOT</mapr.streams.version>
+        <hadoop.version>2.7.4.0-mapr-1908-SNAPSHOT</hadoop.version>
+        <zookeeper.version>3.5.6-mapr-SNAPSHOT</zookeeper.version>
+        <junit.integration.categories>
+            io.confluent.common.utils.IntegrationTest,
+            org.apache.kafka.test.IntegrationTest
+        </junit.integration.categories>
+        <junit.unsupported.categories>
+            io.confluent.kafka.schemaregistry.test.categories.UnsupportedTest
+        </junit.unsupported.categories>
     </properties>
 
     <repositories>
         <repository>
             <id>confluent</id>
             <name>Confluent</name>
-            <url>${confluent.maven.repo}</url>
+            <url>https://packages.confluent.io/maven/</url>
+        </repository>
+        <repository>
+            <id>mapr</id>
+            <url>${env.MAPR_MAVEN_REPO}</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
@@ -180,6 +195,46 @@
                 <artifactId>podam</artifactId>
                 <version>${podam.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>mapr-eco-tools</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>connect-file</artifactId>
+                <version>2.6.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>2.6.0</version>
+                <classifier>test</classifier>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>${zookeeper.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <version>${hadoop.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>rest-utils</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-annotations</artifactId>
@@ -243,6 +298,12 @@
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-streams-avro-serde</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mapr.streams</groupId>
+                <artifactId>mapr-streams</artifactId>
+                <version>${mapr.streams.version}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>io.confluent</groupId>
@@ -313,12 +374,12 @@
                     <configuration>
                         <documentationUrl>https://docs.confluent.io/${project.version}/schema-registry/docs/connect.html</documentationUrl>
                         <sourceUrl>https://github.com/confluentinc/schema-registry</sourceUrl>
-                        
+
                         <supportProviderName>${project.organization.name}</supportProviderName>
                         <supportSummary>Confluent supports the Avro Converter alongside community members as part of its Confluent Platform offering.</supportSummary>
                         <supportUrl>https://docs.confluent.io/current/</supportUrl>
                         <supportLogo>logos/confluent.png</supportLogo>
-                        
+
                         <ownerUsername>confluentinc</ownerUsername>
                         <ownerType>organization</ownerType>
                         <ownerName>${project.organization.name}</ownerName>
@@ -335,6 +396,11 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
                     <version>${exec-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.5</version>
                 </plugin>
                 <plugin>
                     <groupId>com.github.os72</groupId>
@@ -396,6 +462,21 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${junit.integration.categories},${junit.unsupported.categories}</excludedGroups>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <groups>${junit.integration.categories}</groups>
+                    <excludedGroups>${junit.unsupported.categories}</excludedGroups>
+                </configuration>
             </plugin>
         </plugins>
 

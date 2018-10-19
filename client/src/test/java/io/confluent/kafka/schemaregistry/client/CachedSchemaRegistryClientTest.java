@@ -61,13 +61,14 @@ public class CachedSchemaRegistryClientTest {
           SUBJECT_0, 7, ID_25, AvroSchema.TYPE, Collections.emptyList(), SCHEMA_STR_0);
 
   private RestService restService;
-  private CachedSchemaRegistryClient client;
 
   @Before
   public void setUp() {
     restService = createNiceMock(RestService.class);
-
-    client = new CachedSchemaRegistryClient(restService, IDENTITY_MAP_CAPACITY, new HashMap<>());
+  }
+  
+  private CachedSchemaRegistryClient createSchemaRegistryClient() {
+    return new CachedSchemaRegistryClient(restService, IDENTITY_MAP_CAPACITY, new HashMap<>());
   }
 
   @Test
@@ -98,6 +99,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+    
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
 
@@ -113,6 +116,8 @@ public class CachedSchemaRegistryClientTest {
         .once();
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0, VERSION_1, ID_25));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0, VERSION_1, ID_25)); // hit the cache
@@ -130,6 +135,8 @@ public class CachedSchemaRegistryClientTest {
         .andReturn(29);
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     for (int i = 0; i != IDENTITY_MAP_CAPACITY; ++i) {
       client.register(SUBJECT_0, avroSchema(i));  // Each one results in new id.
@@ -157,6 +164,8 @@ public class CachedSchemaRegistryClientTest {
         .andReturn(new SchemaString(SCHEMA_STR_0));
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(
@@ -189,6 +198,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
@@ -217,6 +228,8 @@ public class CachedSchemaRegistryClientTest {
             .andReturn(schemaStringTwo);
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     // Make sure they still get the same ID
     assertEquals(ID_25, client.register(subjectOne, AVRO_SCHEMA_0));
@@ -255,6 +268,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
 
@@ -285,6 +300,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
@@ -307,6 +324,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(mode, client.setMode(mode));
 
     verify(restService);
@@ -323,16 +342,20 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(mode, client.getMode());
 
     verify(restService);
   }
 
   public void testDeleteVersionNotInVersionCache() throws Exception {
-    expect(client.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0"))
+    expect(restService.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0"))
         .andReturn(10);
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     final Integer result = client.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0");
 
@@ -342,6 +365,8 @@ public class CachedSchemaRegistryClientTest {
 
   @Test(expected = NullPointerException.class)
   public void testDeleteNullSubjectThrows() throws Exception {
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+    
     client.deleteSubject(null);
   }
 
@@ -362,6 +387,8 @@ public class CachedSchemaRegistryClientTest {
         .anyTimes();
 
     replay(restService);
+    
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     IntStream.range(0, 1_000)
         .parallel()

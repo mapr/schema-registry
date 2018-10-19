@@ -15,6 +15,9 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -28,7 +31,9 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.HttpHeaders;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.SchemaString;
@@ -65,11 +70,19 @@ public class SchemasResource {
       @ApiResponse(code = 404, message = "Error code 40403 -- Schema not found\n"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n")})
   @PerformanceMetric("schemas.ids.get-schema")
+  @RequirePermission(Permission.READ)
   public SchemaString getSchema(
       @ApiParam(value = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @DefaultValue("") @QueryParam("format") String format,
-      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId) {
+      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchema(id, format, fetchMaxId), auth, cookie);
+  }
+
+  private SchemaString getSchema(Integer id, String format, boolean fetchMaxId) {
     SchemaString schema = null;
     String errorMessage = "Error while retrieving schema with id " + id + " from the schema "
                           + "registry";
@@ -93,9 +106,17 @@ public class SchemasResource {
   @ApiResponses(value = {
       @ApiResponse(code = 404, message = "Error code 40403 -- Schema not found\n"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n")})
+  @RequirePermission(Permission.READ)
   public Set<String> getSubjects(
       @ApiParam(value = "Globally unique identifier of the schema", required = true)
-      @PathParam("id") Integer id) {
+      @PathParam("id") Integer id,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSubjects(id), auth, cookie);
+  }
+
+  private Set<String> getSubjects(Integer id) {
     Set<String> subjects;
     String errorMessage = "Error while retrieving all subjects associated with schema id "
         + id + " from the schema registry";
@@ -122,9 +143,17 @@ public class SchemasResource {
   @ApiResponses(value = {
       @ApiResponse(code = 404, message = "Error code 40403 -- Schema not found\n"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n")})
+  @RequirePermission(Permission.READ)
   public List<SubjectVersion> getVersions(
       @ApiParam(value = "Globally unique identifier of the schema", required = true)
-      @PathParam("id") Integer id) {
+      @PathParam("id") Integer id,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getVersions(id), auth, cookie);
+  }
+
+  private List<SubjectVersion> getVersions(Integer id) {
     List<SubjectVersion> versions;
     String errorMessage = "Error while retrieving all subjects associated with schema id "
                           + id + " from the schema registry";
@@ -150,7 +179,14 @@ public class SchemasResource {
   @ApiOperation("Get the schema types supported by this registry.")
   @ApiResponses(value = {
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n")})
-  public Set<String> getSchemaTypes() {
+  @RequirePermission(Permission.READ)
+  public Set<String> getSchemaTypes(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                    @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaTypes(), auth, cookie);
+  }
+
+  private Set<String> getSchemaTypes() {
     return schemaRegistry.schemaTypes();
   }
 }

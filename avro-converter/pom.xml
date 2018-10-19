@@ -7,16 +7,8 @@
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>kafka-schema-registry-parent</artifactId>
-        <version>6.0.0</version>
+        <version>6.0.0.0-mapr-SNAPSHOT</version>
     </parent>
-
-    <licenses>
-        <license>
-            <name>Apache License 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
 
     <artifactId>kafka-connect-avro-converter</artifactId>
     <packaging>jar</packaging>
@@ -61,11 +53,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -73,6 +60,18 @@
         <dependency>
             <groupId>org.powermock</groupId>
             <artifactId>powermock-module-junit4</artifactId>
+            <version>2.0.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-core</artifactId>
+            <version>2.0.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mapr.streams</groupId>
+            <artifactId>mapr-streams</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -96,16 +95,16 @@
                             <dockerNamespace>confluentinc</dockerNamespace>
                             <dockerName>cp-kafka-connect</dockerName>
                             <dockerTag>${project.version}</dockerTag>
-                            
+
                             <componentTypes>
                                 <componentType>converter</componentType>
                             </componentTypes>
-                            
+
                             <tags>
                                 <tag>avro</tag>
                                 <tag>schema registry</tag>
                             </tags>
-                            
+
                             <kafkaConnectApi>false</kafkaConnectApi>
                             <singleMessageTransforms>false</singleMessageTransforms>
                             <supportedEncodings>
@@ -115,6 +114,7 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-connect-maven-plugin</artifactId>
@@ -131,31 +131,31 @@
                                 <![CDATA[The Kafka Connect Avro Converter integrates with <a href="https://docs.confluent.io/current/schema-registry/docs/intro.html">Schema Registry</a> to convert data for Kafka Connect to and from Avro format.]]>
                             </description>
                             <sourceUrl>https://github.com/confluentinc/schema-registry</sourceUrl>
-                            
+
                             <supportProviderName>Confluent, Inc.</supportProviderName>
                             <supportSummary>Confluent supports the Avro Converter alongside community members as part of its Confluent Platform offering.</supportSummary>
                             <supportUrl>https://docs.confluent.io/current/</supportUrl>
                             <supportLogo>logos/confluent.png</supportLogo>
-                            
+
                             <ownerUsername>confluentinc</ownerUsername>
                             <ownerType>organization</ownerType>
                             <ownerName>Confluent, Inc.</ownerName>
                             <ownerUrl>https://confluent.io/</ownerUrl>
                             <ownerLogo>logos/confluent.png</ownerLogo>
-                            
+
                             <dockerNamespace>confluentinc</dockerNamespace>
                             <dockerName>cp-kafka-connect</dockerName>
                             <dockerTag>${project.version}</dockerTag>
-                            
+
                             <componentTypes>
                                 <componentType>converter</componentType>
                             </componentTypes>
-                            
+
                             <tags>
                                 <tag>avro</tag>
                                 <tag>schema registry</tag>
                             </tags>
-                            
+
                             <kafkaConnectApi>false</kafkaConnectApi>
                             <singleMessageTransforms>false</singleMessageTransforms>
                             <supportedEncodings>

@@ -15,6 +15,9 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -32,6 +35,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -67,7 +71,7 @@ public class ConfigResource {
     this.schemaRegistry = schemaRegistry;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @PUT
   @ApiOperation(value = "Update compatibility level for the specified subject.")
   @ApiResponses(value = {
@@ -76,11 +80,20 @@ public class ConfigResource {
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n"
           + "Error code 50003 -- Error while forwarding the request to the primary")
   })
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateSubjectLevelConfig(
       @ApiParam(value = "Name of the Subject", required = true)@PathParam("subject") String subject,
       @Context HttpHeaders headers,
       @ApiParam(value = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request) {
+      @NotNull ConfigUpdateRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> updateSubjectLevelConfig(subject, headers, request), auth, cookie);
+  }
+
+  private ConfigUpdateRequest updateSubjectLevelConfig(String subject, HttpHeaders headers,
+                                                       ConfigUpdateRequest request) {
     Set<String> subjects = null;
     try {
       subjects = schemaRegistry.listSubjects(false);
@@ -121,15 +134,23 @@ public class ConfigResource {
     return request;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @GET
   @ApiOperation(value = "Get compatibility level for a subject.")
   @ApiResponses(value = {
       @ApiResponse(code = 404, message = "Subject not found"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.READ)
   public Config getSubjectLevelConfig(
       @PathParam("subject") String subject,
-      @QueryParam("defaultToGlobal") boolean defaultToGlobal) {
+      @QueryParam("defaultToGlobal") boolean defaultToGlobal,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+            getSubjectLevelConfig(subject, defaultToGlobal), auth, cookie);
+  }
+
+  private Config getSubjectLevelConfig(String subject, boolean defaultToGlobal) {
     Config config = null;
     try {
       CompatibilityLevel compatibilityLevel =
@@ -155,10 +176,19 @@ public class ConfigResource {
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n"
           + "Error code 50003 -- Error while forwarding the request to the primary\n")
   })
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateTopLevelConfig(
       @Context HttpHeaders headers,
       @ApiParam(value = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request) {
+      @NotNull ConfigUpdateRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+            updateTopLevelConfig(headers, request), auth, cookie);
+  }
+
+  private ConfigUpdateRequest updateTopLevelConfig(HttpHeaders headers,
+                                                   ConfigUpdateRequest request) {
     CompatibilityLevel compatibilityLevel =
         CompatibilityLevel.forName(request.getCompatibilityLevel());
     if (compatibilityLevel == null) {
@@ -187,7 +217,14 @@ public class ConfigResource {
   @ApiResponses(value = {@ApiResponse(code = 500,
       message = "Error code 50001 -- Error in the backend data store")}
   )
-  public Config getTopLevelConfig() {
+  @RequirePermission(Permission.READ)
+  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                  @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+            this::getTopLevelConfig, auth, cookie);
+  }
+
+  private Config getTopLevelConfig() {
     Config config = null;
     try {
       CompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(null);

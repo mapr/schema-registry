@@ -26,6 +26,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -38,6 +40,7 @@ import io.swagger.annotations.ApiOperation;
      Versions.JSON_WEIGHTED})
 @Consumes({Versions.SCHEMA_REGISTRY_V1_JSON, Versions.SCHEMA_REGISTRY_DEFAULT_JSON,
            Versions.JSON, Versions.GENERIC_REQUEST})
+@RequirePermission(Permission.NONE)
 public class RootResource {
 
   @GET

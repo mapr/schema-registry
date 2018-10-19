@@ -22,12 +22,15 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
+import com.mapr.web.security.SslConfig;
+import com.mapr.web.security.WebSecurityManager;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.Map;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class SslFactory {
 
@@ -137,7 +140,18 @@ public class SslFactory {
     if (path == null && password != null) {
       throw new RuntimeException(
           "SSL trust store is not specified, but trust store password is specified.");
-    } else if (isNotBlank(path)) {
+    }
+
+    boolean secureCluster = UserGroupInformation.isSecurityEnabled();
+    if (secureCluster && (path == null || path.isEmpty())) {
+      try (SslConfig sslConfig = WebSecurityManager
+          .getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
+        path = sslConfig.getClientTruststoreLocation();
+        password = new String(sslConfig.getClientTruststorePassword());
+      }
+    }
+
+    if (isNotBlank(path)) {
       this.truststore = new SecurityStore(type, path, password);
     }
   }

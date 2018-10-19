@@ -15,6 +15,9 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaVersionNotSoftDeletedException;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -36,6 +39,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
@@ -63,7 +67,7 @@ import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
 import io.confluent.kafka.schemaregistry.storage.KafkaSchemaRegistry;
 import io.confluent.rest.annotations.PerformanceMetric;
 
-@Path("/subjects/{subject}/versions")
+@Path("/subjects/{subject: .+}/versions")
 @Produces({Versions.SCHEMA_REGISTRY_V1_JSON_WEIGHTED,
            Versions.SCHEMA_REGISTRY_DEFAULT_JSON_WEIGHTED,
            Versions.JSON_WEIGHTED})
@@ -96,10 +100,18 @@ public class SubjectVersionsResource {
           + "Error code 40402 -- Version not found"),
       @ApiResponse(code = 422, message = "Error code 42202 -- Invalid version"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.READ)
   public Schema getSchemaByVersion(
       @ApiParam(value = "Name of the Subject", required = true)@PathParam("subject") String subject,
       @ApiParam(value = VERSION_PARAM_DESC, required = true)@PathParam("version") String version,
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaByVersion(subject, version, lookupDeletedSchema), auth, cookie);
+  }
+
+  private Schema getSchemaByVersion(String subject, String version, boolean lookupDeletedSchema) {
     VersionId versionId = null;
     try {
       versionId = new VersionId(version);
@@ -135,10 +147,18 @@ public class SubjectVersionsResource {
           + "Error code 40402 -- Version not found"), @ApiResponse(code = 422,
       message = "Error code 42202 -- Invalid version"), @ApiResponse(code = 500,
       message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.READ)
   public String getSchemaOnly(
       @ApiParam(value = "Name of the Subject", required = true)@PathParam("subject") String subject,
       @ApiParam(value = VERSION_PARAM_DESC, required = true)@PathParam("version") String version,
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaOnly(subject, version, lookupDeletedSchema), auth, cookie);
+  }
+
+  private String getSchemaOnly(String subject, String version, boolean lookupDeletedSchema) {
     return getSchemaByVersion(subject, version, lookupDeletedSchema).getSchema();
   }
 
@@ -150,9 +170,17 @@ public class SubjectVersionsResource {
           + "Error code 40402 -- Version not found"), @ApiResponse(code = 422,
       message = "Error code 42202 -- Invalid version"), @ApiResponse(code = 500,
       message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.READ)
   public List<Integer> getReferencedBy(
       @ApiParam(value = "Name of the Subject", required = true)@PathParam("subject") String subject,
-      @ApiParam(value = VERSION_PARAM_DESC, required = true)@PathParam("version") String version) {
+      @ApiParam(value = VERSION_PARAM_DESC, required = true)@PathParam("version") String version,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getReferencedBy(subject, version), auth, cookie);
+  }
+
+  private List<Integer> getReferencedBy(String subject, String version) {
     VersionId versionId = null;
     try {
       versionId = new VersionId(version);
@@ -182,10 +210,18 @@ public class SubjectVersionsResource {
   @ApiResponses(value = {
       @ApiResponse(code = 404, message = "Error code 40401 -- Subject not found"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.READ)
   public List<Integer> listVersions(
       @ApiParam(value = "Name of the Subject", required = true)
         @PathParam("subject") String subject,
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> listVersions(subject, lookupDeletedSchema), auth, cookie);
+  }
+
+  private List<Integer> listVersions(String subject, boolean lookupDeletedSchema) {
     // check if subject exists. If not, throw 404
     Iterator<Schema> allSchemasForThisTopic = null;
     List<Integer> allVersions = new ArrayList<Integer>();
@@ -240,13 +276,24 @@ public class SubjectVersionsResource {
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store\n"
           + "Error code 50002 -- Operation timed out\n"
           + "Error code 50003 -- Error while forwarding the request to the primary")})
+  @RequirePermission(Permission.MODIFY)
   public void register(
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
       @ApiParam(value = "Name of the Subject", required = true)
         @PathParam("subject") String subjectName,
       @ApiParam(value = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request) {
+      @NotNull RegisterSchemaRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      register(asyncResponse, headers, subjectName, request);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void register(AsyncResponse asyncResponse, HttpHeaders headers,
+                        String subjectName, RegisterSchemaRequest request) {
     log.info("Registering new schema: subject {}, version {}, id {}, type {}",
              subjectName, request.getVersion(), request.getId(), request.getSchemaType());
 
@@ -307,6 +354,7 @@ public class SubjectVersionsResource {
           + "Error code 40402 -- Version not found"),
       @ApiResponse(code = 422, message = "Error code 42202 -- Invalid version"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store")})
+  @RequirePermission(Permission.MODIFY)
   public void deleteSchemaVersion(
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
@@ -314,7 +362,17 @@ public class SubjectVersionsResource {
         @PathParam("subject") String subject,
       @ApiParam(value = VERSION_PARAM_DESC, required = true)
         @PathParam("version") String version,
-      @QueryParam("permanent") boolean permanentDelete) {
+      @QueryParam("permanent") boolean permanentDelete,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      deleteSchemaVersion(asyncResponse, headers, subject, version, permanentDelete);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void deleteSchemaVersion(AsyncResponse asyncResponse, HttpHeaders headers,
+                                   String subject, String version, boolean permanentDelete) {
     log.info("Deleting schema version {} from subject {}", version, subject);
     VersionId versionId = null;
     try {

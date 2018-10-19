@@ -18,6 +18,8 @@ package io.confluent.kafka.schemaregistry.storage;
 import io.confluent.kafka.schemaregistry.CompatibilityLevel;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.SchemaProvider;
+import org.I0Itec.zkclient.ZkClient;
+
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
@@ -300,6 +302,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
         log.warn("*****************************************************************************");
         leaderElector = new ZookeeperLeaderElector(config, myIdentity, this);
       }
+      saveUrlInZk();
       leaderElector.init();
     } catch (SchemaRegistryStoreException e) {
       throw new SchemaRegistryInitializationException(
@@ -307,6 +310,25 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
     } catch (SchemaRegistryTimeoutException e) {
       throw new SchemaRegistryInitializationException(e);
     }
+  }
+
+  private void saveUrlInZk() throws SchemaRegistryException {
+    final ZkClient zkClient = config.zkUtils().zkClient();
+    if (!zkClient.exists(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR)) {
+      zkClient.createPersistent(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR);
+    }
+    final String path = String.format("%s/%s_%d",
+            SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR,
+            myIdentity.getHost(),
+            myIdentity.getPort());
+    if (zkClient.exists(path)) {
+      final String errMsg =
+              String.format("%s:%d Address already in use",
+                      myIdentity.getHost(),
+                      myIdentity.getPort());
+      throw new SchemaRegistryInitializationException(errMsg);
+    }
+    zkClient.createEphemeral(path, myIdentity.getUrl());
   }
 
   public boolean initialized() {

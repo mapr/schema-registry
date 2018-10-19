@@ -15,6 +15,9 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -31,6 +34,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.HttpHeaders;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.Schema;
@@ -62,7 +66,7 @@ public class CompatibilityResource {
   }
 
   @POST
-  @Path("/subjects/{subject}/versions/{version}")
+  @Path("/subjects/{subject: .+}/versions/{version}")
   @ApiOperation(value = "Test input schema against a particular version of a subject's schema for "
       + "compatibility.",
       notes = "the compatibility level applied for the check is the configured compatibility level "
@@ -78,6 +82,7 @@ public class CompatibilityResource {
           + "Error code 42202 -- Invalid version"),
       @ApiResponse(code = 500, message = "Error code 50001 -- Error in the backend data store") })
   @PerformanceMetric("compatibility.subjects.versions.verify")
+  @RequirePermission(Permission.READ)
   public void testCompatibilityBySubjectName(
       final @Suspended AsyncResponse asyncResponse,
       final @HeaderParam("Content-Type") String contentType,
@@ -89,7 +94,19 @@ public class CompatibilityResource {
           + "\"latest\" checks compatibility of the input schema with the last registered schema "
           + "under the specified subject", required = true)@PathParam("version") String version,
       @ApiParam(value = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request) {
+      @NotNull RegisterSchemaRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      testCompatibilityBySubjectName(asyncResponse, contentType, accept, subject, version,
+              request);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void testCompatibilityBySubjectName(AsyncResponse asyncResponse, String contentType,
+                                        String accept, String subject,
+                                        String version, RegisterSchemaRequest request) {
     log.info("Testing schema subject {} compatibility between existing version {} and "
              + "specified version {}, id {}, type {}",
              subject, version, request.getVersion(), request.getId(), request.getSchemaType());

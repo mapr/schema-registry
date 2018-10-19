@@ -42,6 +42,12 @@
     <suppress checks="BooleanExpressionComplexity"
               files="AvroData.java"/>
 
+    <suppress checks="CommentsIndentation"
+              files="."/>
+
+    <suppress checks="CyclomaticComplexity"
+      files="."/>
+
     <suppress checks="MemberName"
               files="(DynamicSchema|EnumDefinition|MessageDefinition).java"/>
 

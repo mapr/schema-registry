@@ -15,13 +15,20 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import io.confluent.rest.RestConfigException;
 import kafka.cluster.Broker;
 
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
+import org.easymock.EasyMock;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +38,15 @@ import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(MaprFSUtils.class)
 public class SchemaRegistryConfigTest {
+  @Before
+  public void setUp() {
+    PowerMock.mockStatic(MaprFSUtils.class);
+    EasyMock.expect(MaprFSUtils.getZKQuorum()).andReturn("none:8888");
+    PowerMock.replay(MaprFSUtils.class);
+  }
 
   @Test
   public void testFilterBrokerEndpointsSinglePlaintext() {

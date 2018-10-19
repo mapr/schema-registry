@@ -1,0 +1,22 @@
+#!/bin/bash
+
+PID="${BASEMAPR:-/opt/mapr}/pid/schemaregistry.pid"
+SERVICE_NAME="SchemaRegistry"
+
+if [ -e $PID ]
+then
+    TARGET=`cat "$PID"`
+fi
+
+if [ "x$TARGET" != "x" ]; then
+    kill -0 $TARGET
+    STATUS=$?
+fi
+
+if [ "$STATUS" != "0" ]; then
+  echo "${SERVICE_NAME} not running."
+  exit 1
+else
+  echo "${SERVICE_NAME} running as process ${TARGET}"
+  exit 0
+fi

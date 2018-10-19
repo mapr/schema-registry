@@ -34,6 +34,8 @@ import io.confluent.kafka.schemaregistry.client.security.bearerauth.BearerAuthCr
 
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.ConfigException;
+import com.mapr.security.client.ClientSecurity;
+import com.mapr.security.client.MapRClientSecurityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +52,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -161,6 +164,8 @@ public class RestService implements Configurable {
   private BearerAuthCredentialProvider bearerAuthCredentialProvider;
   private Map<String, String> httpHeaders;
   private Proxy proxy;
+  private boolean maprSaslAuth = false;
+  private String authCookie;
 
   public RestService(UrlList baseUrls) {
     this.baseUrls = baseUrls;
@@ -203,6 +208,9 @@ public class RestService implements Configurable {
               configs
           );
       setBearerAuthCredentialProvider(bearerAuthCredentialProvider);
+    } else {
+      String maprSasl = (String) configs.get(SchemaRegistryClientConfig.MAPRSASL_AUTH_CONFIG);
+      setMaprSaslAuth(Boolean.valueOf(maprSasl));
     }
 
     String proxyHost = (String) configs.get(SchemaRegistryClientConfig.PROXY_HOST);
@@ -222,6 +230,19 @@ public class RestService implements Configurable {
 
   private static boolean isValidProxyConfig(String proxyHost, Integer proxyPort) {
     return isNonEmpty(proxyHost) && proxyPort != null && proxyPort > 0;
+  }
+
+  public static String readChallengeString() {
+    ClientSecurity cs = new ClientSecurity();
+    try {
+      return cs.generateChallenge();
+    } catch (MapRClientSecurityException e) {
+      throw new RuntimeException("Cannot read chalange string", e);
+    }
+  }
+
+  public void setMaprSaslAuth(Boolean maprSaslAuth) {
+    this.maprSaslAuth = maprSaslAuth != null && maprSaslAuth;
   }
 
   public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
@@ -271,6 +292,7 @@ public class RestService implements Configurable {
 
       int responseCode = connection.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
+        extractAuthCookieFromResponse(connection);
         InputStream is = connection.getInputStream();
         T result = jsonDeserializer.readValue(is, responseFormat);
         is.close();
@@ -278,18 +300,7 @@ public class RestService implements Configurable {
       } else if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         return null;
       } else {
-        ErrorMessage errorMessage;
-        try (InputStream es = connection.getErrorStream()) {
-          if (es != null) {
-            errorMessage = jsonDeserializer.readValue(es, ErrorMessage.class);
-          } else {
-            errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, "Error");
-          }
-        } catch (JsonProcessingException e) {
-          errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, e.getMessage());
-        }
-        throw new RestClientException(errorMessage.getMessage(), responseCode,
-                                      errorMessage.getErrorCode());
+        return handleBadResponse(connection);
       }
 
     } finally {
@@ -297,6 +308,29 @@ public class RestService implements Configurable {
         connection.disconnect();
       }
     }
+  }
+
+  private <T> T handleBadResponse(HttpURLConnection connection)
+      throws IOException, RestClientException {
+    int responseCode = connection.getResponseCode();
+    // Auth handlers do not return json hence throw human-readable messages
+    if (responseCode == 401 || responseCode == 403) {
+      throw new RestClientException(connection.getResponseMessage(),
+                                    responseCode, responseCode);
+    }
+
+    ErrorMessage errorMessage;
+    try (InputStream es = connection.getErrorStream()) {
+      if (es != null) {
+        errorMessage = jsonDeserializer.readValue(es, ErrorMessage.class);
+      } else {
+        errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, "Error");
+      }
+    } catch (JsonProcessingException e) {
+      errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, e.getMessage());
+    }
+    throw new RestClientException(errorMessage.getMessage(), responseCode,
+            errorMessage.getErrorCode());
   }
 
   private HttpURLConnection buildConnection(URL url, String method, Map<String,
@@ -314,7 +348,7 @@ public class RestService implements Configurable {
 
     setupSsl(connection);
     connection.setRequestMethod(method);
-    setAuthRequestHeaders(connection);
+    setAuthRequestHeaderOrCookie(connection);
     setCustomHeaders(connection);
     // connection.getResponseCode() implicitly calls getInputStream, so always set to true.
     // On the other hand, leaving this out breaks nothing.
@@ -349,11 +383,27 @@ public class RestService implements Configurable {
       String baseUrl = baseUrls.current();
       String requestUrl = buildRequestUrl(baseUrl, path);
       try {
-        return sendHttpRequest(requestUrl,
-                               method,
-                               requestBodyData,
-                               requestProperties,
-                               responseFormat);
+        try {
+          return sendHttpRequest(requestUrl,
+                  method,
+                  requestBodyData,
+                  requestProperties,
+                  responseFormat);
+        } catch (RestClientException e) {
+          // If we get 401 (UNATHORIZED) this means that authCookie is expired
+          // (or invalid beacuse of another reason).
+          // We will use credentials or challange string
+          // for authentication. authCookie will be updated.
+          if (e.getStatus() == 401 && authCookie != null) {
+            authCookie = null;
+            return sendHttpRequest(requestUrl,
+                    method,
+                    requestBodyData,
+                    requestProperties,
+                    responseFormat);
+          }
+          throw e;
+        }
       } catch (IOException e) {
         baseUrls.fail(baseUrl);
         if (i == n - 1) {
@@ -922,21 +972,38 @@ public class RestService implements Configurable {
     return baseUrls;
   }
 
-  private void setAuthRequestHeaders(HttpURLConnection connection) {
-    if (basicAuthCredentialProvider != null) {
-      String userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL());
-      if (userInfo != null) {
-        String authHeader = Base64.getEncoder().encodeToString(
-            userInfo.getBytes(StandardCharsets.UTF_8));
-        connection.setRequestProperty(AUTHORIZATION_HEADER, "Basic " + authHeader);
+  private void extractAuthCookieFromResponse(HttpURLConnection connection) {
+    final Optional<String> hadoopAuth =
+            Optional.ofNullable(connection.getHeaderField("Set-Cookie"));
+    hadoopAuth.ifPresent((value) -> {
+      if (value.startsWith("hadoop.auth")) {
+        authCookie = value;
       }
+    });
+  }
+
+  private void setAuthRequestHeaderOrCookie(HttpURLConnection connection) {
+    // Cookie authentication header
+    if (authCookie != null) {
+      connection.setRequestProperty("Cookie", authCookie);
+      return;
     }
 
-    if (bearerAuthCredentialProvider != null) {
-      String bearerToken = bearerAuthCredentialProvider.getBearerToken(connection.getURL());
-      if (bearerToken != null) {
-        connection.setRequestProperty(AUTHORIZATION_HEADER, "Bearer " + bearerToken);
-      }
+    // Basic authentication header
+    String userInfo;
+    if (basicAuthCredentialProvider != null
+            && (userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL())) != null) {
+      String authHeader = Base64.getEncoder().encodeToString(
+              userInfo.getBytes(StandardCharsets.UTF_8));
+      connection.setRequestProperty("Authorization", "Basic " + authHeader);
+      return;
+    }
+
+    // MapR Sasl authentication header
+    if (maprSaslAuth) {
+      String maprSaslChallengeString = readChallengeString();
+      connection.setRequestProperty("Authorization",
+              String.format("MAPR-Negotiate %s", maprSaslChallengeString));
     }
   }
 
@@ -950,6 +1017,7 @@ public class RestService implements Configurable {
       BasicAuthCredentialProvider basicAuthCredentialProvider) {
     this.basicAuthCredentialProvider = basicAuthCredentialProvider;
   }
+
 
   public void setBearerAuthCredentialProvider(
       BearerAuthCredentialProvider bearerAuthCredentialProvider) {

@@ -35,7 +35,16 @@
         </fileSet>
         <fileSet>
             <directory>${project.parent.basedir}/config</directory>
-            <outputDirectory>etc/schema-registry</outputDirectory>
+            <outputDirectory>conf.new</outputDirectory>
+            <includes>
+                <include>*</include>
+                <include>secure/*</include>
+                <include>unsecure/*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.parent.basedir}/warden</directory>
+            <outputDirectory>warden</outputDirectory>
             <includes>
                 <include>*</include>
             </includes>
@@ -52,10 +61,6 @@
                  dependencies happen to be missing in the assembly you may want to
                  disable transitive filtering. -->
             <useTransitiveFiltering>true</useTransitiveFiltering>
-            <excludes>
-                <exclude>io.confluent:rest-utils</exclude>
-                <exclude>io.confluent:common-*</exclude>
-            </excludes>
         </dependencySet>
     </dependencySets>
 </assembly>

@@ -26,6 +26,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.security.JaasUtils;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.utils.Utils;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.jdk.javaapi.CollectionConverters;
@@ -49,8 +50,17 @@ public class SchemaRegistryConfig extends RestConfig {
 
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryConfig.class);
 
-  private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8081;
-  // TODO: change this to "http://0.0.0.0:8081" when PORT_CONFIG is deleted.
+  /**
+   * MapR specific constants.
+   */
+  public static final String SCHEMAREGISTRY_SERVICES_COMMON_FOLDER = "/apps/schema-registry/";
+
+  private static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
+
+  public static final String SCHEMAREGISTRY_ZK_URLS_DIR = "/sr_urls";
+
+  private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
+  // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
   private static final String SCHEMAREGISTRY_LISTENERS_DEFAULT = "";
 
   public static final String SCHEMAREGISTRY_GROUP_ID_CONFIG = "schema.registry.group.id";
@@ -69,11 +79,6 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG
       = "kafkastore.zk.session.timeout.ms";
-  /**
-   * <code>kafkastore.topic</code>
-   */
-  public static final String KAFKASTORE_TOPIC_CONFIG = "kafkastore.topic";
-  public static final String DEFAULT_KAFKASTORE_TOPIC = "_schemas";
   /**
    * <code>kafkastore.topic.replication.factor</code>
    */
@@ -111,11 +116,6 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String MODE_MUTABILITY = "mode.mutability";
   public static final boolean DEFAULT_MODE_MUTABILITY = false;
-  /**
-   * <code>schema.registry.zk.name</code>*
-   */
-  public static final String SCHEMAREGISTRY_ZK_NAMESPACE = "schema.registry.zk.namespace";
-  public static final String DEFAULT_SCHEMAREGISTRY_ZK_NAMESPACE = "schema_registry";
   /**
    * <code>host.name</code>
    */
@@ -187,6 +187,10 @@ public class SchemaRegistryConfig extends RestConfig {
       "inter.instance.protocol";
   public static final String INTER_INSTANCE_HEADERS_WHITELIST_CONFIG =
       "inter.instance.headers.whitelist";
+  public static final String ENABLE_AUTHORIZATION_CONFIG =
+            "authorization.enable";
+  public static final boolean ENABLE_AUTHORIZATION_DEFAULT =
+            false;
 
   protected static final String SCHEMAREGISTRY_GROUP_ID_DOC =
       "Use this setting to override the group.id for the Kafka group used when Kafka is used for "
@@ -223,10 +227,6 @@ public class SchemaRegistryConfig extends RestConfig {
       + "This setting can become important when security is enabled, to ensure stability over "
       + "the schema registry consumer's group.id\n"
       + "Without this configuration, group.id will be \"schema-registry-<host>-<port>\"";
-  protected static final String SCHEMAREGISTRY_ZK_NAMESPACE_DOC =
-      "The string that is used as the zookeeper namespace for storing schema registry "
-      + "metadata. SchemaRegistry instances which are part of the same schema registry service "
-      + "should have the same ZooKeeper namespace.";
   protected static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC =
       "Zookeeper session timeout";
   protected static final String KAFKASTORE_TOPIC_DOC =
@@ -344,6 +344,14 @@ public class SchemaRegistryConfig extends RestConfig {
       = "A list of ``http`` headers to forward from follower to leader, "
       + "in addition to ``Content-Type``, ``Accept``, ``Authorization``.";
 
+  protected static final String ENABLE_AUTHORIZATION_DOC =
+      "Set 'true' or 'false' to enable or disable authorization for Schema Registry service";
+
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_CONFIG = "schema.registry.service.id";
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_DEFAULT = "default_";
+
   private static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
   private static final String COMPATIBILITY_DEFAULT = "backward";
   private static final String METRICS_JMX_PREFIX_DEFAULT_OVERRIDE = "kafka.schema.registry";
@@ -354,7 +362,13 @@ public class SchemaRegistryConfig extends RestConfig {
   public static final String HTTPS = "https";
   public static final String HTTP = "http";
 
+  private final String kafkaStoreStreamFolder;
+  private final String kafkaStoreStream;
+  private final String kafkaStoreTopic;
+
   private Properties originalProperties;
+
+  private final String schemaRegistryZkNamespace;
 
   private ZkUtils zkUtils;
 
@@ -373,16 +387,12 @@ public class SchemaRegistryConfig extends RestConfig {
         SCHEMA_REGISTRY_MOST_SPECIFIC_DEFAULT,
         METRICS_JMX_PREFIX_DEFAULT_OVERRIDE
     )
-    .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, "",
+    .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, MaprFSUtils.getZKQuorum(),
         ConfigDef.Importance.HIGH, KAFKASTORE_CONNECTION_URL_DOC
     )
     .define(KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, ConfigDef.Type.LIST, "",
         ConfigDef.Importance.MEDIUM,
         KAFKASTORE_BOOTSTRAP_SERVERS_DOC
-    )
-    .define(SCHEMAREGISTRY_ZK_NAMESPACE, ConfigDef.Type.STRING,
-            DEFAULT_SCHEMAREGISTRY_ZK_NAMESPACE,
-            ConfigDef.Importance.LOW, SCHEMAREGISTRY_ZK_NAMESPACE_DOC
     )
     .define(SCHEMAREGISTRY_GROUP_ID_CONFIG, ConfigDef.Type.STRING, "schema-registry",
             ConfigDef.Importance.MEDIUM, SCHEMAREGISTRY_GROUP_ID_DOC
@@ -391,9 +401,6 @@ public class SchemaRegistryConfig extends RestConfig {
         ConfigDef.Importance.LOW, INTER_INSTANCE_HEADERS_WHITELIST_DOC)
     .define(KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG, ConfigDef.Type.INT, 30000, atLeast(0),
             ConfigDef.Importance.LOW, KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC
-    )
-    .define(KAFKASTORE_TOPIC_CONFIG, ConfigDef.Type.STRING, DEFAULT_KAFKASTORE_TOPIC,
-        ConfigDef.Importance.HIGH, KAFKASTORE_TOPIC_DOC
     )
     .define(KAFKASTORE_TOPIC_REPLICATION_FACTOR_CONFIG, ConfigDef.Type.INT,
         DEFAULT_KAFKASTORE_TOPIC_REPLICATION_FACTOR,
@@ -535,7 +542,18 @@ public class SchemaRegistryConfig extends RestConfig {
     .define(SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, "",
             ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
     .define(INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, HTTP,
-            ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC);
+            ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
+    .define(
+            SCHEMA_REGISTRY_SERVICE_ID_CONFIG,
+            ConfigDef.Type.STRING,
+            SCHEMA_REGISTRY_SERVICE_ID_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+            "Indicates the ID of the schema registry service.")
+    .define(ENABLE_AUTHORIZATION_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            ENABLE_AUTHORIZATION_DEFAULT,
+            ConfigDef.Importance.LOW,
+            ENABLE_AUTHORIZATION_DOC);
   }
 
   private final CompatibilityLevel compatibilityType;
@@ -574,6 +592,27 @@ public class SchemaRegistryConfig extends RestConfig {
     if (compatibilityType == null) {
       throw new RestConfigException("Unknown compatibility level: " + compatibilityTypeString);
     }
+    final String serviceId = getString(SCHEMA_REGISTRY_SERVICE_ID_CONFIG);
+    kafkaStoreStreamFolder = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + serviceId;
+    kafkaStoreStream = kafkaStoreStreamFolder + "/schema-registry-internal-stream";
+    kafkaStoreTopic = kafkaStoreStream + ":_schemas";
+    schemaRegistryZkNamespace = SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + serviceId;
+  }
+
+  public String getKafkaStoreStream() {
+    return kafkaStoreStream;
+  }
+
+  public String getKafkaStoreStreamFolder() {
+    return kafkaStoreStreamFolder;
+  }
+
+  public String getKafkaStoreTopic() {
+    return kafkaStoreTopic;
+  }
+
+  public String getSchemaRegistryZkNameSpace() {
+    return schemaRegistryZkNamespace;
   }
 
   private static String getDefaultHost() {
@@ -738,7 +777,7 @@ public class SchemaRegistryConfig extends RestConfig {
   public synchronized ZkUtils zkUtils() {
     if (zkUtils == null) {
       boolean zkAclsEnabled = checkZkAclConfig();
-      String srZkNamespace = getString(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_NAMESPACE);
+      String srZkNamespace = getSchemaRegistryZkNameSpace();
       String srClusterZkUrl = getString(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG);
       int zkSessionTimeoutMs = getInt(SchemaRegistryConfig.KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG);
 
