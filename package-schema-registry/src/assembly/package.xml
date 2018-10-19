@@ -33,7 +33,7 @@
         </fileSet>
         <fileSet>
             <directory>${project.parent.basedir}/config</directory>
-            <outputDirectory>etc/schema-registry</outputDirectory>
+            <outputDirectory>conf.new</outputDirectory>
             <includes>
                 <include>*</include>
             </includes>
