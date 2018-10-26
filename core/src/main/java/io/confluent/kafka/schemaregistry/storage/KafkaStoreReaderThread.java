@@ -99,7 +99,6 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, this.groupId);
     consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, "KafkaStore-reader-" + this.topic);
 
-    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,

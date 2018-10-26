@@ -99,9 +99,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     this.localStore = localStore;
     this.noopKey = noopKey;
     this.config = config;
-    this.bootstrapBrokers = config.bootstrapBrokers();
-
-    log.info("Initializing KafkaStore with broker endpoints: " + this.bootstrapBrokers);
+    this.bootstrapBrokers = null;
   }
 
   @Override
@@ -116,7 +114,6 @@ public class KafkaStore<K, V> implements Store<K, V> {
     // set the producer properties and initialize a Kafka producer client
     Properties props = new Properties();
     addSchemaRegistryConfigsToClientProperties(this.config, props);
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     props.put(ProducerConfig.ACKS_CONFIG, "-1");
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
               org.apache.kafka.common.serialization.ByteArraySerializer.class);
@@ -157,8 +154,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
   private void createOrVerifySchemaTopic() throws StoreInitializationException {
     Properties props = new Properties();
-    addSchemaRegistryConfigsToClientProperties(this.config, props);
-    props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
+    props.setProperty(AdminClientConfig.STREAMS_ADMIN_DEFAULT_STREAM_CONFIG, "/kafka-internal-stream");
 
     try (AdminClient admin = AdminClient.create(props)) {
       //
@@ -234,7 +230,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     Map<String, TopicDescription> topicDescription = admin.describeTopics(topics)
         .all().get(initTimeout, TimeUnit.MILLISECONDS);
 
-    TopicDescription description = topicDescription.get(topic);
+    TopicDescription description = topicDescription.get("/kafka-internal-stream:" + topic);
     final int numPartitions = description.partitions().size();
     if (numPartitions != 1) {
       throw new StoreInitializationException("The schema topic " + topic + " should have only 1 "
