@@ -68,6 +68,11 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG
       = "kafkastore.zk.session.timeout.ms";
+    /**
+     * <code>kafkastore.stream</code>
+     */
+    public static final String KAFKASTORE_STREAM_CONFIG = "kafkastore.stream";
+    public static final String DEFAULT_KAFKASTORE_STREAM = "/var/mapr/schema-registry-internal-stream";
   /**
    * <code>kafkastore.topic</code>
    */
@@ -202,6 +207,8 @@ public class SchemaRegistryConfig extends RestConfig {
       + "should have the same ZooKeeper namespace.";
   protected static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC =
       "Zookeeper session timeout";
+  protected static final String KAFKASTORE_STREAM_DOC =
+      "Mapr stream for schema topic";
   protected static final String KAFKASTORE_TOPIC_DOC =
       "The durable single partition topic that acts"
       + "as the durable log for the data";
@@ -363,6 +370,9 @@ public class SchemaRegistryConfig extends RestConfig {
         )
         .define(KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG, ConfigDef.Type.INT, 30000, atLeast(0),
             ConfigDef.Importance.LOW, KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC
+        )
+        .define(KAFKASTORE_STREAM_CONFIG, ConfigDef.Type.STRING, DEFAULT_KAFKASTORE_STREAM,
+            ConfigDef.Importance.HIGH, KAFKASTORE_STREAM_DOC
         )
         .define(KAFKASTORE_TOPIC_CONFIG, ConfigDef.Type.STRING, DEFAULT_KAFKASTORE_TOPIC,
             ConfigDef.Importance.HIGH, KAFKASTORE_TOPIC_DOC

@@ -52,6 +52,7 @@ import scala.collection.JavaConversions;
 public abstract class ClusterTestHarness {
 
   public static final int DEFAULT_NUM_BROKERS = 1;
+  public static final String KAFKASTORE_STREAM = SchemaRegistryConfig.DEFAULT_KAFKASTORE_STREAM;
   public static final String KAFKASTORE_TOPIC = SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC;
   protected static final Option<Properties> EMPTY_SASL_PROPERTIES = Option$.MODULE$.<Properties>empty();
 
@@ -183,7 +184,7 @@ public abstract class ClusterTestHarness {
   }
 
   protected void setupRestApp(Properties schemaRegistryProps) throws Exception {
-    restApp = new RestApp(schemaRegistryPort, zkConnect, null, KAFKASTORE_TOPIC,
+    restApp = new RestApp(schemaRegistryPort, zkConnect, null, KAFKASTORE_STREAM + ":" + KAFKASTORE_TOPIC,
                           compatibilityType, true, schemaRegistryProps);
     restApp.start();
   }

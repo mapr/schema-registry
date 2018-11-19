@@ -105,6 +105,7 @@ public class StoreUtils {
           Properties props)
       throws RestConfigException, StoreInitializationException, SchemaRegistryException {
     props.put(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG, zkConnect);
+    props.put(SchemaRegistryConfig.KAFKASTORE_STREAM_CONFIG, ClusterTestHarness.KAFKASTORE_STREAM);
     props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = null;

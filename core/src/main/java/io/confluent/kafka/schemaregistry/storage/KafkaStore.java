@@ -56,7 +56,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
   private static final Logger log = LoggerFactory.getLogger(KafkaStore.class);
 
+  private final String stream;
   private final String topic;
+  private final String fullTopicName;
   private final int desiredReplicationFactor;
   private final String groupId;
   private final StoreUpdateHandler<K, V> storeUpdateHandler;
@@ -80,7 +82,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
                     Serializer<K, V> serializer,
                     Store<K, V> localStore,
                     K noopKey) throws SchemaRegistryException {
+    this.stream = config.getString(SchemaRegistryConfig.KAFKASTORE_STREAM_CONFIG);
     this.topic = config.getString(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG);
+    this.fullTopicName = stream + ":" + topic;
     this.desiredReplicationFactor =
         config.getInt(SchemaRegistryConfig.KAFKASTORE_TOPIC_REPLICATION_FACTOR_CONFIG);
     int port = KafkaSchemaRegistry.getSchemeAndPortForIdentity(
@@ -126,7 +130,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     // start the background thread that subscribes to the Kafka topic and applies updates.
     // the thread must be created after the schema topic has been created.
     this.kafkaTopicReader =
-        new KafkaStoreReaderThread<>(this.bootstrapBrokers, topic, groupId,
+        new KafkaStoreReaderThread<>(this.bootstrapBrokers, fullTopicName, groupId,
                                      this.storeUpdateHandler, serializer, this.localStore,
                                      this.producer, this.noopKey, this.config);
     this.kafkaTopicReader.start();
@@ -154,7 +158,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
   private void createOrVerifySchemaTopic() throws StoreInitializationException {
     Properties props = new Properties();
-    props.setProperty(AdminClientConfig.STREAMS_ADMIN_DEFAULT_STREAM_CONFIG, "/kafka-internal-stream");
+    props.setProperty(AdminClientConfig.STREAMS_ADMIN_DEFAULT_STREAM_CONFIG, stream);
 
     try (AdminClient admin = AdminClient.create(props)) {
       //
@@ -192,7 +196,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     int schemaTopicReplicationFactor = Math.min(numLiveBrokers, desiredReplicationFactor);
     if (schemaTopicReplicationFactor < desiredReplicationFactor) {
       log.warn("Creating the schema topic "
-               + topic
+               + fullTopicName
                + " using a replication factor of "
                + schemaTopicReplicationFactor
                + ", which is less than the desired one of "
@@ -200,7 +204,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
                + "crucial to add more brokers and increase the replication factor of the topic.");
     }
 
-    NewTopic schemaTopicRequest = new NewTopic(topic, 1, (short) schemaTopicReplicationFactor);
+    NewTopic schemaTopicRequest = new NewTopic(fullTopicName, 1, (short) schemaTopicReplicationFactor);
     schemaTopicRequest.configs(
         Collections.singletonMap(
             TopicConfig.CLEANUP_POLICY_CONFIG,
@@ -224,29 +228,29 @@ public class KafkaStore<K, V> implements Store<K, V> {
                                                            InterruptedException,
                                                            ExecutionException,
                                                            TimeoutException {
-    log.info("Validating schemas topic {}", topic);
+    log.info("Validating schemas topic {}", fullTopicName);
 
-    Set<String> topics = Collections.singleton(topic);
+    Set<String> topics = Collections.singleton(fullTopicName);
     Map<String, TopicDescription> topicDescription = admin.describeTopics(topics)
         .all().get(initTimeout, TimeUnit.MILLISECONDS);
 
-    TopicDescription description = topicDescription.get("/kafka-internal-stream:" + topic);
+    TopicDescription description = topicDescription.get(fullTopicName);
     final int numPartitions = description.partitions().size();
     if (numPartitions != 1) {
-      throw new StoreInitializationException("The schema topic " + topic + " should have only 1 "
+      throw new StoreInitializationException("The schema topic " + fullTopicName + " should have only 1 "
                                              + "partition but has " + numPartitions);
     }
 
     if (description.partitions().get(0).replicas().size() < desiredReplicationFactor) {
       log.warn("The replication factor of the schema topic "
-               + topic
+               + fullTopicName
                + " is less than the desired one of "
                + desiredReplicationFactor
                + ". If this is a production environment, it's crucial to add more brokers and "
                + "increase the replication factor of the topic.");
     }
 
-    ConfigResource topicResource = new ConfigResource(ConfigResource.Type.TOPIC, topic);
+    ConfigResource topicResource = new ConfigResource(ConfigResource.Type.TOPIC, fullTopicName);
 
     Map<ConfigResource, Config> configs =
         admin.describeConfigs(Collections.singleton(topicResource)).all()
@@ -254,12 +258,12 @@ public class KafkaStore<K, V> implements Store<K, V> {
     Config topicConfigs = configs.get(topicResource);
     String retentionPolicy = topicConfigs.get(TopicConfig.CLEANUP_POLICY_CONFIG).value();
     if (retentionPolicy == null || !TopicConfig.CLEANUP_POLICY_COMPACT.equals(retentionPolicy)) {
-      log.error("The retention policy of the schema topic " + topic + " is incorrect. "
+      log.error("The retention policy of the schema topic " + fullTopicName + " is incorrect. "
                 + "You must configure the topic to 'compact' cleanup policy to avoid Kafka "
                 + "deleting your schemas after a week. "
                 + "Refer to Kafka documentation for more details on cleanup policies");
 
-      throw new StoreInitializationException("The retention policy of the schema topic " + topic
+      throw new StoreInitializationException("The retention policy of the schema topic " + fullTopicName
                                              + " is incorrect. Expected cleanup.policy to be "
                                              + "'compact' but it is " + retentionPolicy);
 
@@ -299,7 +303,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     ProducerRecord<byte[], byte[]> producerRecord = null;
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(topic, 0, this.serializer.serializeKey(key),
+          new ProducerRecord<byte[], byte[]>(fullTopicName, 0, this.serializer.serializeKey(key),
                                              value == null ? null : this.serializer.serializeValue(
                                                  value));
     } catch (SerializationException e) {
@@ -412,7 +416,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(topic, 0, this.serializer.serializeKey(noopKey), null);
+          new ProducerRecord<byte[], byte[]>(fullTopicName, 0, this.serializer.serializeKey(noopKey), null);
     } catch (SerializationException e) {
       throw new StoreException("Failed to serialize noop key.", e);
     }
