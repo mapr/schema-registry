@@ -61,7 +61,7 @@ public class ConfigResource {
     this.schemaRegistry = schemaRegistry;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @PUT
   public ConfigUpdateRequest updateSubjectLevelConfig(
       @PathParam("subject") String subject,
@@ -104,7 +104,7 @@ public class ConfigResource {
     return request;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @GET
   public Config getSubjectLevelConfig(@PathParam("subject") String subject) {
     Config config = null;

@@ -61,7 +61,7 @@ public class CompatibilityResource {
   }
 
   @POST
-  @Path("/subjects/{subject}/versions/{version}")
+  @Path("/subjects/{subject: .+}/versions/{version}")
   @PerformanceMetric("compatibility.subjects.versions.verify")
   public void lookUpSchemaUnderSubject(final @Suspended AsyncResponse asyncResponse,
                                        final @HeaderParam("Content-Type") String contentType,

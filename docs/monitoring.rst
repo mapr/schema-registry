@@ -92,12 +92,12 @@ endpoint name ``brokers.list`` with the metric name ``request-rate`` to get
 ``brokers.list.request-rate``.
 
   ========================================== =======================================================
-  ``compatibility.subjects.versions.verify`` ``POST /compatibility/subjects/{subject}/versions/{version}``
+  ``compatibility.subjects.versions.verify`` ``POST /compatibility/subjects/{subject: .+}/versions/{version}``
   ``schemas.ids.get-schema``                 ``GET /schemas/ids/{id}``
-  ``subjects.get-schema``                    ``POST /subjects/{subject}``
+  ``subjects.get-schema``                    ``POST /subjects/{subject: .+}``
   ``subjects.list``                          ``GET /subjects``
-  ``subjects.versions.get-schema``           ``GET /subjects/{subject}/versions/{version}``
-  ``subjects.versions.get-schema.only``      ``GET /subjects/{subject}/versions/{version}/schema``
-  ``subjects.versions.list``                 ``GET /subjects/{subject}/versions``
-  ``subjects.versions.register``             ``POST /subjects/{subject}/versions``
+  ``subjects.versions.get-schema``           ``GET /subjects/{subject: .+}/versions/{version}``
+  ``subjects.versions.get-schema.only``      ``GET /subjects/{subject: .+}/versions/{version}/schema``
+  ``subjects.versions.list``                 ``GET /subjects/{subject: .+}/versions``
+  ``subjects.versions.register``             ``POST /subjects/{subject: .+}/versions``
   ========================================== =======================================================

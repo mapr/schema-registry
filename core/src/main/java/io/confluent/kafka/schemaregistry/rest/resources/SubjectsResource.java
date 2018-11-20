@@ -64,7 +64,7 @@ public class SubjectsResource {
   }
 
   @POST
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @PerformanceMetric("subjects.get-schema")
   public void lookUpSchemaUnderSubject(final @Suspended AsyncResponse asyncResponse,
                                        @PathParam("subject") String subject,
@@ -106,7 +106,7 @@ public class SubjectsResource {
   }
 
   @DELETE
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @PerformanceMetric("subjects.delete-subject")
   public void deleteSubject(final @Suspended AsyncResponse asyncResponse,
                             @Context HttpHeaders headers,
