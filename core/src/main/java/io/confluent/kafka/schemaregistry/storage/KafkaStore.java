@@ -164,7 +164,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
       //
       Set<String> allTopics = admin.listTopics().names().get(initTimeout, TimeUnit.MILLISECONDS);
       if (allTopics.contains(topic)) {
-        verifySchemaTopic(admin);
+//        verifySchemaTopic(admin);
       } else {
         createSchemaTopic(admin);
       }
