@@ -77,7 +77,7 @@
             <id>mapr-releases</id>
             <url>http://repository.mapr.com/maven/</url>
         </repository>
-        <!-- TODO: remove before release ->>
+        <!-- TODO: remove before release -->
         <repository>
             <id>mapr-snapshots</id>
             <url>http://repository_cv.mapr.com/maven/</url>
