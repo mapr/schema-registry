@@ -73,6 +73,10 @@
             <name>Confluent</name>
             <url>${confluent.maven.repo}</url>
         </repository>
+        <repository>
+            <id>mapr-releases</id>
+            <url>http://repository.mapr.com/maven/</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>
