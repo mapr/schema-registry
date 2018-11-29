@@ -71,8 +71,8 @@ public class SchemaRegistryConfig extends RestConfig {
     /**
      * <code>kafkastore.stream</code>
      */
-    public static final String KAFKASTORE_STREAM_CONFIG = "kafkastore.stream";
-    public static final String DEFAULT_KAFKASTORE_STREAM = "/var/mapr/schema-registry-internal-stream";
+  public static final String KAFKASTORE_STREAM_CONFIG = "kafkastore.stream";
+  public static final String DEFAULT_KAFKASTORE_STREAM = "/var/mapr/schema-registry-internal-stream";
   /**
    * <code>kafkastore.topic</code>
    */
