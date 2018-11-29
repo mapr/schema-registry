@@ -112,6 +112,11 @@
                 <artifactId>zookeeper</artifactId>
                 <version>3.4.11-mapr-SNAPSHOT</version>
             </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>rest-utils</artifactId>
+                <version>4.0.0-mapr</version>
+            </dependency>
 
             <!--children-->
             <dependency>

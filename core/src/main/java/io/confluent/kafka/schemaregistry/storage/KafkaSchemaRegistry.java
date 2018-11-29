@@ -102,8 +102,11 @@ public class KafkaSchemaRegistry implements SchemaRegistry, MasterAwareSchemaReg
   private SslFactory sslFactory;
   private IdGenerator idGenerator = null;
   private MasterElector masterElector = null;
-  private Metrics metrics;
-  private Sensor masterNodeSensor;
+
+//  this is done because we use old version of rest-utils
+
+//  private Metrics metrics;
+//  private Sensor masterNodeSensor;
 
   public KafkaSchemaRegistry(SchemaRegistryConfig config,
                              Serializer<SchemaRegistryKey, SchemaRegistryValue> serializer)
@@ -127,25 +130,39 @@ public class KafkaSchemaRegistry implements SchemaRegistry, MasterAwareSchemaReg
     this.lookupCache = lookupCache();
     this.idGenerator = identityGenerator(config);
     this.kafkaStore = kafkaStore(config);
-    MetricConfig metricConfig =
-        new MetricConfig().samples(config.getInt(ProducerConfig.METRICS_NUM_SAMPLES_CONFIG))
-            .timeWindow(config.getLong(ProducerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG),
-                        TimeUnit.MILLISECONDS);
-    List<MetricsReporter> reporters =
-        config.getConfiguredInstances(ProducerConfig.METRIC_REPORTER_CLASSES_CONFIG,
-                                      MetricsReporter.class);
-    String jmxPrefix = "kafka.schema.registry";
-    reporters.add(new JmxReporter(jmxPrefix));
-    this.metrics = new Metrics(metricConfig, reporters, new SystemTime());
-    this.masterNodeSensor = metrics.sensor("master-slave-role");
+//    MetricConfig metricConfig =
+//        new MetricConfig().samples(config.getInt(ProducerConfig.METRICS_NUM_SAMPLES_CONFIG))
+//            .timeWindow(config.getLong(ProducerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG),
+//                        TimeUnit.MILLISECONDS);
+//    List<MetricsReporter> reporters =
+//        config.getConfiguredInstances(ProducerConfig.METRIC_REPORTER_CLASSES_CONFIG,
+//                                      MetricsReporter.class);
+//    String jmxPrefix = "kafka.schema.registry";
+//    reporters.add(new JmxReporter(jmxPrefix));
+//    this.metrics = new Metrics(metricConfig, reporters, new SystemTime());
+//    this.masterNodeSensor = metrics.sensor("master-slave-role");
 
-    Map<String, String> configuredTags = config.getMap(RestConfig.METRICS_TAGS_CONFIG);
-    MetricName
-        m = new MetricName("master-slave-role", "master-slave-role",
-                           "1.0 indicates the node is the active master in the cluster and is the"
-                           + " node where all register schema and config update requests are "
-                           + "served.", configuredTags);
-    this.masterNodeSensor.add(m, new Gauge());
+//  this is done because we use old version of rest-utils
+
+//    MetricConfig metricConfig =
+//        new MetricConfig().samples(config.getInt(ProducerConfig.METRICS_NUM_SAMPLES_CONFIG))
+//            .timeWindow(config.getLong(ProducerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG),
+//                        TimeUnit.MILLISECONDS);
+//    List<MetricsReporter> reporters =
+//        config.getConfiguredInstances(ProducerConfig.METRIC_REPORTER_CLASSES_CONFIG,
+//                                      MetricsReporter.class);
+//    String jmxPrefix = "kafka.schema.registry";
+//    reporters.add(new JmxReporter(jmxPrefix));
+//    this.metrics = new Metrics(metricConfig, reporters, new SystemTime());
+//    this.masterNodeSensor = metrics.sensor("master-slave-role");
+//
+//    Map<String, String> configuredTags = config.getMap(RestConfig.METRICS_TAGS_CONFIG);
+//    MetricName
+//        m = new MetricName("master-slave-role", "master-slave-role",
+//                           "1.0 indicates the node is the active master in the cluster and is the"
+//                           + " node where all register schema and config update requests are "
+//                           + "served.", configuredTags);
+//    this.masterNodeSensor.add(m, new Gauge());
   }
 
   protected KafkaStore<SchemaRegistryKey, SchemaRegistryValue> kafkaStore(
@@ -284,7 +301,8 @@ public class KafkaSchemaRegistry implements SchemaRegistry, MasterAwareSchemaReg
         }
         idGenerator.init();
       }
-      masterNodeSensor.record(isMaster() ? 1.0 : 0.0);
+//  this is done because we use old version of rest-utils
+//      masterNodeSensor.record(isMaster() ? 1.0 : 0.0);
     }
   }
 
