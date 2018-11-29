@@ -142,7 +142,7 @@ else
 fi
 
 changeSrPermission
-if [ ! -f "$SR_HOME/conf/.first_start" ]; then
+if [ ! -f "$SR_CONF_DIR/.not_configured_yet" ]; then
     createRestartFile
 fi
 copyFilesToTargetConfigDir
@@ -150,8 +150,8 @@ createInternalStreamIfNotExists
 setupWardenConfFile
 
 # remove state file and start files
-if [ -f "$SR_HOME/conf/.not_configured_yet" ]; then
-    rm -f "$SR_HOME/conf/.not_configured_yet"
+if [ -f "$SR_CONF_DIR/.not_configured_yet" ]; then
+    rm -f "$SR_CONF_DIR/.not_configured_yet"
 fi
 
 true
