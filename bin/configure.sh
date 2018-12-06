@@ -62,7 +62,6 @@ EOF
 
   chmod +x "${MAPR_CONF_DIR}/restart/schemaregistry-$SR_VERSION.restart"
   chown -R $MAPR_USER:$MAPR_GROUP "${MAPR_CONF_DIR}/restart/schemaregistry-$SR_VERSION.restart"
-
 }
 
 #
@@ -86,16 +85,27 @@ function getProperty() {
 }
 
 createInternalStreamIfNotExists() {
+   if [ -f "$DAEMON_CONF" ]; then
+      MAPR_USER=$( awk -F = '$1 == "mapr.daemon.user" { print $2 }' "$DAEMON_CONF")
+   else
+      MAPR_USER=`logname`
+   fi
    CONF_FILE="$SR_CONF_DIR/schema-registry.properties"
    INTERNAL_STREAM_NAME=$(getProperty $CONF_FILE "kafkastore.stream")
-   if ! hadoop fs -test -e $INTERNAL_STREAM_NAME; then
+   runuser -l $MAPR_USER -c "if ! hadoop fs -test -e $INTERNAL_STREAM_NAME; then
        maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm p -consumeperm p -topicperm p
-   fi
+   fi"
 }
 
 copyFilesToTargetConfigDir() {
     mkdir -p $SR_CONF_DIR
-    cp -n $SR_TEMPLATE_CONF_DIR/* $SR_CONF_DIR
+    cp -n $SR_TEMPLATE_CONF_DIR/*.properties $SR_CONF_DIR
+
+    if [ $secureCluster == 1 ]; then
+        cp -n $SR_TEMPLATE_CONF_DIR/secure/schema-registry-secure.properties $SR_CONF_DIR/schema-registry.properties
+    else
+        cp -n $SR_TEMPLATE_CONF_DIR/unsecure/schema-registry.properties $SR_CONF_DIR/schema-registry.properties
+    fi
 }
 
 #
@@ -141,11 +151,11 @@ else
     return 1 2>/dev/null || exit 1
 fi
 
-changeSrPermission
 if [ ! -f "$SR_CONF_DIR/.not_configured_yet" ]; then
     createRestartFile
 fi
 copyFilesToTargetConfigDir
+changeSrPermission
 createInternalStreamIfNotExists
 setupWardenConfFile
 
