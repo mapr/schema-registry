@@ -28,6 +28,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 
@@ -66,7 +67,14 @@ public class ConfigResource {
   public ConfigUpdateRequest updateSubjectLevelConfig(
       @PathParam("subject") String subject,
       @Context HttpHeaders headers,
-      @NotNull ConfigUpdateRequest request) {
+      @NotNull ConfigUpdateRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateSubjectLevelConfigInternal(subject, headers, request)
+            , auth);
+  }
+
+  private ConfigUpdateRequest updateSubjectLevelConfigInternal(String subject, HttpHeaders headers,
+                                                               ConfigUpdateRequest request) {
     Set<String> subjects = null;
     try {
       subjects = schemaRegistry.listSubjects();
@@ -106,7 +114,12 @@ public class ConfigResource {
 
   @Path("/{subject: .+}")
   @GET
-  public Config getSubjectLevelConfig(@PathParam("subject") String subject) {
+  public Config getSubjectLevelConfig(@PathParam("subject") String subject,
+                                      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSubjectLevelConfigInternal(subject), auth);
+  }
+
+  private Config getSubjectLevelConfigInternal(String subject) {
     Config config = null;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(subject);
@@ -124,8 +137,13 @@ public class ConfigResource {
 
   @PUT
   public ConfigUpdateRequest updateTopLevelConfig(
-      @Context HttpHeaders headers,
-      @NotNull ConfigUpdateRequest request) {
+          @Context HttpHeaders headers,
+          @NotNull ConfigUpdateRequest request,
+          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request), auth);
+  }
+
+  private ConfigUpdateRequest updateTopLevelConfigInternal(HttpHeaders headers, ConfigUpdateRequest request) {
     AvroCompatibilityLevel compatibilityLevel =
         AvroCompatibilityLevel.forName(request.getCompatibilityLevel());
     if (compatibilityLevel == null) {
@@ -147,7 +165,11 @@ public class ConfigResource {
   }
 
   @GET
-  public Config getTopLevelConfig() {
+  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getTopLevelConfigInternal(), auth);
+  }
+
+  private Config getTopLevelConfigInternal() {
     Config config = null;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(null);

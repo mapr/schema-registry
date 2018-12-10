@@ -23,6 +23,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.core.HttpHeaders;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.SchemaString;
@@ -51,7 +53,12 @@ public class SchemasResource {
   @GET
   @Path("/ids/{id}")
   @PerformanceMetric("schemas.ids.get-schema")
-  public SchemaString getSchema(@PathParam("id") Integer id) {
+  public SchemaString getSchema(@PathParam("id") Integer id,
+                                @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(id), auth);
+  }
+
+  private SchemaString getSchemaInternal(Integer id) {
     SchemaString schema = null;
     String errorMessage = "Error while retrieving schema with id " + id + " from the schema "
                           + "registry";

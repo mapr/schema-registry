@@ -30,6 +30,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.HttpHeaders;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.Schema;
@@ -68,8 +69,18 @@ public class CompatibilityResource {
                                        final @HeaderParam("Accept") String accept,
                                        @PathParam("subject") String subject,
                                        @PathParam("version") String version,
-                                       @NotNull RegisterSchemaRequest request) {
-    // returns true if posted schema is compatible with the specified version. "latest" is 
+                                       @NotNull RegisterSchemaRequest request,
+                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      lookUpSchemaUnderSubjectInternal(asyncResponse, contentType, accept, subject, version, request);
+      return null;
+    }, auth);
+  }
+
+  private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String contentType,
+                                                String accept, String subject,
+                                                String version, RegisterSchemaRequest request) {
+    // returns true if posted schema is compatible with the specified version. "latest" is
     // a special version
     Map<String, String> headerProperties = new HashMap<String, String>();
     headerProperties.put("Content-Type", contentType);

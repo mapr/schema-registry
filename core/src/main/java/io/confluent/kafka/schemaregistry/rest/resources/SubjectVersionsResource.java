@@ -31,6 +31,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
@@ -76,7 +77,12 @@ public class SubjectVersionsResource {
   @Path("/{version}")
   @PerformanceMetric("subjects.versions.get-schema")
   public Schema getSchema(@PathParam("subject") String subject,
-                          @PathParam("version") String version) {
+                          @PathParam("version") String version,
+                          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(subject, version), auth);
+  }
+
+  private Schema getSchemaInternal(String subject, String version) {
     VersionId versionId = null;
     try {
       versionId = new VersionId(version);
@@ -108,13 +114,23 @@ public class SubjectVersionsResource {
   @Path("/{version}/schema")
   @PerformanceMetric("subjects.versions.get-schema.only")
   public String getSchemaOnly(@PathParam("subject") String subject,
-                              @PathParam("version") String version) {
-    return getSchema(subject, version).getSchema();
+                              @PathParam("version") String version,
+                              @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaOnlyInternal(subject, version), auth);
+  }
+
+  private String getSchemaOnlyInternal(String subject, String version) {
+    return getSchemaInternal(subject, version).getSchema();
   }
 
   @GET
   @PerformanceMetric("subjects.versions.list")
-  public List<Integer> list(@PathParam("subject") String subject) {
+  public List<Integer> list(@PathParam("subject") String subject,
+                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(subject), auth);
+  }
+
+  private List<Integer> listInternal(String subject) {
     // check if subject exists. If not, throw 404
     Iterator<Schema> allSchemasForThisTopic = null;
     List<Integer> allVersions = new ArrayList<Integer>();
@@ -152,8 +168,16 @@ public class SubjectVersionsResource {
   public void register(final @Suspended AsyncResponse asyncResponse,
                        @Context HttpHeaders headers,
                        @PathParam("subject") String subjectName,
-                       @NotNull RegisterSchemaRequest request) {
+                       @NotNull RegisterSchemaRequest request,
+                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      registerInternal(asyncResponse, headers, subjectName, request);
+      return null;
+    }, auth);
+  }
 
+  private void registerInternal(AsyncResponse asyncResponse, HttpHeaders headers,
+                               String subjectName, RegisterSchemaRequest request) {
     Map<String, String> headerProperties = requestHeaderBuilder.buildRequestHeaders(headers);
 
     Schema schema = new Schema(subjectName, 0, 0, request.getSchema());
@@ -189,7 +213,16 @@ public class SubjectVersionsResource {
   public void deleteSchemaVersion(final @Suspended AsyncResponse asyncResponse,
                                   @Context HttpHeaders headers,
                                   @PathParam("subject") String subject,
-                                  @PathParam("version") String version) {
+                                  @PathParam("version") String version,
+                                  @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      deleteSchemaVersionInternal(asyncResponse, headers, subject, version);
+      return null;
+    }, auth);
+  }
+
+  private void deleteSchemaVersionInternal(AsyncResponse asyncResponse, HttpHeaders headers,
+                                           String subject, String version) {
     VersionId versionId = null;
     try {
       versionId = new VersionId(version);

@@ -32,6 +32,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
@@ -70,7 +71,16 @@ public class SubjectsResource {
                                        @PathParam("subject") String subject,
                                        @QueryParam("deleted") boolean
                                            lookupDeletedSchema,
-                                       @NotNull RegisterSchemaRequest request) {
+                                       @NotNull RegisterSchemaRequest request,
+                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      lookUpSchemaUnderSubjectInternal(asyncResponse, subject, lookupDeletedSchema, request);
+      return null;
+    }, auth);
+  }
+
+  private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String subject,
+                                                boolean lookupDeletedSchema, RegisterSchemaRequest request) {
     // returns version if the schema exists. Otherwise returns 404
     Schema schema = new Schema(subject, 0, 0, request.getSchema());
     io.confluent.kafka.schemaregistry.client.rest.entities.Schema matchingSchema = null;
@@ -90,12 +100,14 @@ public class SubjectsResource {
     asyncResponse.resume(matchingSchema);
   }
 
-
-
   @GET
   @Valid
   @PerformanceMetric("subjects.list")
-  public Set<String> list() {
+  public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(), auth);
+  }
+
+  private Set<String> listInternal() {
     try {
       return schemaRegistry.listSubjects();
     } catch (SchemaRegistryStoreException e) {
@@ -110,7 +122,17 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.delete-subject")
   public void deleteSubject(final @Suspended AsyncResponse asyncResponse,
                             @Context HttpHeaders headers,
-                            @PathParam("subject") String subject) {
+                            @PathParam("subject") String subject,
+                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+    ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      deleteSubjectInternal(asyncResponse, headers, subject);
+      return null;
+    }, auth);
+  }
+
+  private void deleteSubjectInternal(AsyncResponse asyncResponse,
+                                     HttpHeaders headers,
+                                     String subject) {
     List<Integer> deletedVersions;
     try {
       if (!schemaRegistry.listSubjects().contains(subject)) {
@@ -124,5 +146,4 @@ public class SubjectsResource {
     }
     asyncResponse.resume(deletedVersions);
   }
-
 }

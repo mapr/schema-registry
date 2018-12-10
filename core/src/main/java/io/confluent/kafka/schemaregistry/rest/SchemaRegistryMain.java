@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
+import io.confluent.kafka.schemaregistry.rest.resources.ImpersonationUtils;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class SchemaRegistryMain {
         System.exit(1);
       }
       SchemaRegistryConfig config = new SchemaRegistryConfig(args[0]);
+      ImpersonationUtils.initialize(config);
       SchemaRegistryRestApplication app = new SchemaRegistryRestApplication(config);
       Server server = app.createServer();
       server.start();

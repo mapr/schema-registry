@@ -22,7 +22,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
@@ -67,7 +66,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
   private final ReentrantLock offsetUpdateLock;
   private final Condition offsetReachedThreshold;
   private Consumer<byte[], byte[]> consumer;
-  private final Producer<byte[], byte[]> producer;
+  private final KafkaProducerPool producerPool;
   private long offsetInSchemasTopic = -1L;
   // Noop key is only used to help reliably determine last offset; reader thread ignores 
   // messages with this key
@@ -81,7 +80,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
                                 StoreUpdateHandler<K, V> storeUpdateHandler,
                                 Serializer<K, V> serializer,
                                 Store<K, V> localStore,
-                                Producer<byte[], byte[]> producer,
+                                KafkaProducerPool producerPool,
                                 K noopKey,
                                 SchemaRegistryConfig config) {
     super("kafka-store-reader-thread-" + topic, false);  // this thread is not interruptible
@@ -92,7 +91,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
     this.storeUpdateHandler = storeUpdateHandler;
     this.serializer = serializer;
     this.localStore = localStore;
-    this.producer = producer;
+    this.producerPool = producerPool;
     this.noopKey = noopKey;
 
     KafkaStore.addSchemaRegistryConfigsToClientProperties(config, consumerProps);
@@ -200,7 +199,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
                       record.key(),
                       null
                   );
-                  producer.send(producerRecord);
+                  producerPool.send(producerRecord);
                 } catch (KafkaException ke) {
                   log.warn("Failed to tombstone schema with duplicate ID", ke);
                 }

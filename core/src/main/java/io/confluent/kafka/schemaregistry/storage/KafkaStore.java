@@ -20,7 +20,6 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -69,7 +68,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
   private final int initTimeout;
   private final int timeout;
   private final String bootstrapBrokers;
-  private KafkaProducer<byte[], byte[]> producer;
+  private KafkaProducerPool producerPool;
   private KafkaStoreReaderThread<K, V> kafkaTopicReader;
   // Noop key is only used to help reliably determine last offset; reader thread ignores
   // messages with this key
@@ -125,14 +124,14 @@ public class KafkaStore<K, V> implements Store<K, V> {
               org.apache.kafka.common.serialization.ByteArraySerializer.class);
     props.put(ProducerConfig.RETRIES_CONFIG, 0); // Producer should not retry
 
-    producer = new KafkaProducer<byte[], byte[]>(props);
+    producerPool = new KafkaProducerPool(props);
 
     // start the background thread that subscribes to the Kafka topic and applies updates.
     // the thread must be created after the schema topic has been created.
     this.kafkaTopicReader =
         new KafkaStoreReaderThread<>(this.bootstrapBrokers, fullTopicName, groupId,
                                      this.storeUpdateHandler, serializer, this.localStore,
-                                     this.producer, this.noopKey, this.config);
+                                     this.producerPool, this.noopKey, this.config);
     this.kafkaTopicReader.start();
 
     try {
@@ -270,8 +269,6 @@ public class KafkaStore<K, V> implements Store<K, V> {
     }
   }
 
-
-
   /**
    * Wait until the KafkaStore catches up to the last message in the Kafka topic.
    */
@@ -314,7 +311,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     boolean knownSuccessfulWrite = false;
     try {
       log.trace("Sending record to KafkaStore topic: " + producerRecord);
-      Future<RecordMetadata> ack = producer.send(producerRecord);
+      Future<RecordMetadata> ack = producerPool.send(producerRecord);
       RecordMetadata recordMetadata = ack.get(timeout, TimeUnit.MILLISECONDS);
 
       log.trace("Waiting for the local store to catch up to offset " + recordMetadata.offset());
@@ -370,9 +367,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
       kafkaTopicReader.shutdown();
       log.debug("Kafka store reader thread shut down");
     }
-    if (producer != null) {
-      producer.close();
-      log.debug("Kafka store producer shut down");
+    if (producerPool != null) {
+      producerPool.close();
+      log.debug("Kafka store producers shut down");
     }
     localStore.close();
     log.debug("Kafka store shut down complete");
@@ -423,7 +420,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
     try {
       log.trace("Sending Noop record to KafkaStore to find last offset.");
-      Future<RecordMetadata> ack = producer.send(producerRecord);
+      Future<RecordMetadata> ack = producerPool.send(producerRecord);
       RecordMetadata metadata = ack.get(timeoutMs, TimeUnit.MILLISECONDS);
       this.lastWrittenOffset = metadata.offset();
       log.trace("Noop record's offset is " + this.lastWrittenOffset);
