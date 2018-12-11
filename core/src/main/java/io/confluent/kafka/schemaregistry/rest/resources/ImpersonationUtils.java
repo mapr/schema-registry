@@ -19,8 +19,10 @@ package io.confluent.kafka.schemaregistry.rest.resources;
 import com.sun.security.auth.module.UnixSystem;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
+import io.confluent.kafka.schemaregistry.rest.exceptions.RestSchemaRegistryStoreException;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.PrivilegedAction;
 import java.util.Base64;
@@ -55,8 +57,10 @@ public class ImpersonationUtils {
                 String uname = getUserNameFromAuthentication(auth);
                 UserGroupInformation ugi = UserGroupInformation.createProxyUser(uname, UserGroupInformation.getLoginUser());
                 return ugi.doAs(action);
-            } catch (Exception e) {
-                throw Errors.schemaRegistryException("Operation is not permitted for this user", e);
+            } catch (IOException e) {
+                throw Errors.serverLoginException(e);
+            } catch (RestSchemaRegistryStoreException e) {
+                throw Errors.schemaRegistryException("It is not possible to do this operation", e);
             }
         } else {
             return action.run();

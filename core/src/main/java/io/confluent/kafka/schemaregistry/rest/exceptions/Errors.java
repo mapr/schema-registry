@@ -91,4 +91,8 @@ public class Errors {
   public static RestException unknownMasterException(String message, Throwable cause) {
     return new RestUnknownMasterException(message, cause);
   }
+
+  public static RestServerLoginException serverLoginException(Throwable cause) {
+    return new RestServerLoginException(cause);
+  }
 }

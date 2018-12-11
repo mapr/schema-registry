@@ -16,7 +16,7 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
-import kafka.common.KafkaException;
+import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -50,7 +50,7 @@ public class KafkaProducerPool {
 
             return producer.send(record);
         } catch (IOException e) {
-            throw new KafkaException(e);
+            throw Errors.serverLoginException(e);
         }
     }
 
