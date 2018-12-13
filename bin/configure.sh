@@ -16,6 +16,14 @@ secureCluster=0
 MAPR_USER=""
 MAPR_GROUP=""
 
+if [ -f "$DAEMON_CONF" ]; then
+  MAPR_USER=$( awk -F = '$1 == "mapr.daemon.user" { print $2 }' "$DAEMON_CONF")
+  MAPR_GROUP=$( awk -F = '$1 == "mapr.daemon.group" { print $2 }' "$DAEMON_CONF")
+else
+  MAPR_USER=`logname`
+  MAPR_GROUP="$MAPR_USER"
+fi
+
 # isSecure is set in server/configure.sh
 if [ -n "$isSecure" ]; then
   if [ "$isSecure" == "true" ]; then
@@ -24,14 +32,6 @@ if [ -n "$isSecure" ]; then
 fi
 
 changeSrPermission() {
-  if [ -f "$DAEMON_CONF" ]; then
-    MAPR_USER=$( awk -F = '$1 == "mapr.daemon.user" { print $2 }' "$DAEMON_CONF")
-    MAPR_GROUP=$( awk -F = '$1 == "mapr.daemon.group" { print $2 }' "$DAEMON_CONF")
-  else
-    MAPR_USER=`logname`
-    MAPR_GROUP="$MAPR_USER"
-  fi
-
   #
   # change permissions
   #
@@ -85,15 +85,16 @@ function getProperty() {
 }
 
 createInternalStreamIfNotExists() {
-   if [ -f "$DAEMON_CONF" ]; then
-      MAPR_USER=$( awk -F = '$1 == "mapr.daemon.user" { print $2 }' "$DAEMON_CONF")
-   else
-      MAPR_USER=`logname`
-   fi
    CONF_FILE="$SR_CONF_DIR/schema-registry.properties"
    INTERNAL_STREAM_NAME=$(getProperty $CONF_FILE "kafkastore.stream")
    runuser -l $MAPR_USER -c "if ! hadoop fs -test -e $INTERNAL_STREAM_NAME; then
-       maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm p -consumeperm p -topicperm p
+       if [ $secureCluster == 1 ]; then
+           maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm u:$MAPR_USER -consumeperm p -topicperm u:$MAPR_USER
+       else
+           maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm p -consumeperm p -topicperm p
+       fi
+   else
+       echo WARNING: Schema Registry internal stream already exists. Make sure that it has appropriate permissions.
    fi"
 }
 
