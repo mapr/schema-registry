@@ -19,7 +19,7 @@ package io.confluent.kafka.schemaregistry.rest.resources;
 import com.sun.security.auth.module.UnixSystem;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
-import io.confluent.kafka.schemaregistry.rest.exceptions.RestSchemaRegistryStoreException;
+import io.confluent.rest.exceptions.RestServerErrorException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
@@ -59,7 +59,7 @@ public class ImpersonationUtils {
                 return ugi.doAs(action);
             } catch (IOException e) {
                 throw Errors.serverLoginException(e);
-            } catch (RestSchemaRegistryStoreException e) {
+            } catch (RestServerErrorException e) {
                 throw Errors.schemaRegistryException("It is not possible to do this operation", e);
             }
         } else {

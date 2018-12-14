@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
+import com.mapr.web.security.SslConfig;
+import com.mapr.web.security.WebSecurityManager;
 import org.eclipse.jetty.util.StringUtil;
 
 import java.io.FileInputStream;
@@ -126,12 +128,20 @@ public class SslFactory {
 
   private void createTruststore(String type, String path, String password)
       throws SchemaRegistryException {
-    if (path == null && password != null) {
-      throw new SchemaRegistryException(
-          "SSL trust store is not specified, but trust store password is specified.");
-    } else if (StringUtil.isNotBlank(path)) {
-      this.truststore = new SecurityStore(type, path, password);
+
+    if (path == null || path.isEmpty()) {
+      try(SslConfig sslConfig = WebSecurityManager.getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
+        path = sslConfig.getClientTruststoreLocation();
+      }
     }
+
+    if (password == null || password.isEmpty()) {
+      try(SslConfig sslConfig = WebSecurityManager.getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
+        password = new String(sslConfig.getClientTruststorePassword());
+      }
+    }
+
+    this.truststore = new SecurityStore(type, path, password);
   }
 
   private static class SecurityStore {
