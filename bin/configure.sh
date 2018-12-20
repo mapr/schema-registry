@@ -103,7 +103,8 @@ copyFilesToTargetConfigDir() {
     cp -n $SR_TEMPLATE_CONF_DIR/*.properties $SR_CONF_DIR
 
     if [ $secureCluster == 1 ]; then
-        cp -n $SR_TEMPLATE_CONF_DIR/secure/schema-registry-secure.properties $SR_CONF_DIR/schema-registry.properties
+        cp -n $SR_TEMPLATE_CONF_DIR/unsecure/schema-registry.properties $SR_CONF_DIR/schema-registry.properties
+        # cp -n $SR_TEMPLATE_CONF_DIR/secure/schema-registry-secure.properties $SR_CONF_DIR/schema-registry.properties
     else
         cp -n $SR_TEMPLATE_CONF_DIR/unsecure/schema-registry.properties $SR_CONF_DIR/schema-registry.properties
     fi
