@@ -16,12 +16,12 @@ Features
 * Authentication
 
   * :ref:`SSL authentication<authentication-ssl-schema-registry>` with a secure Kafka Cluster
-  * :ref:`SASL authentication<kafka_sasl_auth>` with a secure Kafka Cluster 
+  * :ref:`SASL authentication<kafka_sasl_auth>` with a secure Kafka Cluster
   * :ref:`Authentication with ZooKeeper over SASL<schema_registry_zk_sasl_auth>`
 
 * Authorization
 
-  * :ref:`Authorization for Schema Registry operations <confluentsecurityplugins_schema_registry_authorization>`
+.. tip:: For a configuration example that uses |sr| configured with security, see the :ref:`Confluent Platform demo <cp-demo>`.
 
 
 For configuration details, check the :ref:`configuration options<schemaregistry_config>`.
@@ -80,7 +80,7 @@ The following configuration determines the protocol used by |sr|:
   Comma-separated list of listeners that listen for API requests over HTTP or HTTPS or both. If a listener uses HTTPS, the appropriate SSL configuration parameters need to be set as well.
 
   * Type: list
-  * Default: "http://0.0.0.0:8081"
+  * Default: "http://0.0.0.0:8087"
   * Importance: high
 
 On the clients, configure ``schema.registry.url`` to match the configured |sr| listener.
@@ -129,7 +129,7 @@ Migrating from HTTP to HTTPS
 
 To upgrade |sr| to allow REST API calls over HTTPS in an existing cluster:
 
-- Add/Modify the ``listeners`` config  to include HTTPS. For example: http://0.0.0.0:8081,https://0.0.0.0:8082
+- Add/Modify the ``listeners`` config  to include HTTPS. For example: http://0.0.0.0:8086,https://0.0.0.0:8082
 - Configure |sr| with appropriate SSL configurations to setup the keystore and optionally truststore
 - Do a rolling bounce of the cluster
 

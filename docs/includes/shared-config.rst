@@ -33,7 +33,7 @@ Comma-separated list of listeners that listen for API requests over either HTTP 
 |sr| identities are stored in |zk| and are made up of a hostname and port. If multiple listeners are configured, the first listener's port is used for its identity.
 
 * Type: list
-* Default: "http://0.0.0.0:8081"
+* Default: "http://0.0.0.0:8086"
 * Importance: high
 
 avro.compatibility.level
@@ -409,7 +409,7 @@ port
 DEPRECATED: port to listen on for new connections. Use :ref:`sr-listeners` instead.
 
 * Type: int
-* Default: 8081
+* Default: 8086
 * Importance: low
 
 request.logger.name

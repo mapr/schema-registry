@@ -21,9 +21,9 @@ properties can be configured independently of each other.
 .. sourcecode:: properties
 
     key.converter=io.confluent.connect.avro.AvroConverter
-    key.converter.schema.registry.url=http://localhost:8081
+    key.converter.schema.registry.url=http://localhost:8086
     value.converter=io.confluent.connect.avro.AvroConverter
-    value.converter.schema.registry.url=http://localhost:8081
+    value.converter.schema.registry.url=http://localhost:8086
 
 
 Configuration Options

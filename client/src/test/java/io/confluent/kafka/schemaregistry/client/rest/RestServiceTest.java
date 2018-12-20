@@ -83,7 +83,7 @@ public class RestServiceTest {
    */
   @Test
   public void testSetBasicAuthRequestHeader() throws Exception {
-    RestService restService = new RestService("http://localhost:8081");
+    RestService restService = new RestService("http://localhost:8086");
 
     BasicAuthCredentialProvider basicAuthCredentialProvider = createMock(BasicAuthCredentialProvider.class);
     restService.setBasicAuthCredentialProvider(basicAuthCredentialProvider);
