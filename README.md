@@ -83,38 +83,6 @@ $ curl -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
   {"compatibility":"BACKWARD"}
 ```
 
-Installation
-------------
-
-You can download prebuilt versions of the Kafka REST Proxy as part of the
-[Confluent Platform](http://confluent.io/downloads/). To install from source,
-follow the instructions in the Development section.
-
-Deployment
-----------
-
-The REST interface to schema registry includes a built-in Jetty server. The
-wrapper scripts ``bin/schema-registry-start`` and ``bin/schema-registry-stop``
-are the recommended method of starting and stopping the service.
-
-Development
------------
-
-To build a development version, you may need a development versions of
-[common](https://github.com/confluentinc/common) and
-[rest-utils](https://github.com/confluentinc/rest-utils).  After
-installing these, you can build the Schema Registry
-with Maven.
-
-This project uses the [Google Java code style](https://google.github.io/styleguide/javaguide.html)
-to keep code clean and consistent.
-
-Contribute
-----------
-
-- Source Code: https://github.com/confluentinc/schema-registry
-- Issue Tracker: https://github.com/confluentinc/schema-registry/issues
-
 License
 -------
 
