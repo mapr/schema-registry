@@ -87,15 +87,10 @@ function getProperty() {
 createInternalStreamIfNotExists() {
    CONF_FILE="$SR_CONF_DIR/schema-registry.properties"
    INTERNAL_STREAM_NAME=$(getProperty $CONF_FILE "kafkastore.stream")
-   runuser -l $MAPR_USER -c "if ! hadoop fs -test -e $INTERNAL_STREAM_NAME; then
-       if [ $secureCluster == 1 ]; then
-           maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm u:$MAPR_USER -consumeperm p -topicperm u:$MAPR_USER
-       else
-           maprcli stream create -path $INTERNAL_STREAM_NAME -produceperm p -consumeperm p -topicperm p
-       fi
-   else
-       echo WARNING: Schema Registry internal stream already exists. Make sure that it has appropriate permissions.
-   fi"
+   runuser -l $MAPR_USER -c "bash $SR_BIN/create-internal-stream-if-not-exists.sh $secureCluster $INTERNAL_STREAM_NAME $MAPR_USER"
+   if [ $? == 1 ]; then
+      exit 1
+   fi
 }
 
 copyFilesToTargetConfigDir() {
