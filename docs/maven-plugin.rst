@@ -49,7 +49,7 @@ This plugin is used to download Avro schemas for the requested subjects and writ
         <version>5.1.2</version>
         <configuration>
             <schemaRegistryUrls>
-                <param>http://192.168.99.100:8086</param>
+                <param>http://192.168.99.100:8087</param>
             </schemaRegistryUrls>
             <outputDirectory>src/main/avro</outputDirectory>
             <subjectPatterns>
@@ -85,7 +85,7 @@ project are compatible with the schemas in another environment.
         <version>5.1.2</version>
         <configuration>
             <schemaRegistryUrls>
-                <param>http://192.168.99.100:8086</param>
+                <param>http://192.168.99.100:8087</param>
             </schemaRegistryUrls>
             <subjects>
                 <TestSubject000-key>src/main/avro/TestSubject000-Key.avsc</TestSubject000-key>
@@ -123,7 +123,7 @@ This goal can be used in a continuous deployment pipeline to push schemas to a n
         <version>5.1.2</version>
         <configuration>
             <schemaRegistryUrls>
-                <param>http://192.168.99.100:8086</param>
+                <param>http://192.168.99.100:8087</param>
             </schemaRegistryUrls>
             <subjects>
                 <TestSubject000-key>src/main/avro/TestSubject000-Key.avsc</TestSubject000-key>

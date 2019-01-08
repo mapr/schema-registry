@@ -26,7 +26,7 @@ done
 
 DEFAULT_AVRO_FORMATTER="--formatter io.confluent.kafka.formatter.AvroMessageFormatter"
 
-DEFAULT_SCHEMA_REGISTRY_URL="--property schema.registry.url=http://localhost:8086"
+DEFAULT_SCHEMA_REGISTRY_URL="--property schema.registry.url=http://localhost:8087"
 
 for OPTION in "$@"
 do 

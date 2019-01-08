@@ -53,7 +53,7 @@ to Kafka. A ``SerializationException`` may occur during the send call, if the da
               io.confluent.kafka.serializers.KafkaAvroSerializer.class);
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
               io.confluent.kafka.serializers.KafkaAvroSerializer.class);
-    props.put("schema.registry.url", "http://localhost:8086");
+    props.put("schema.registry.url", "http://localhost:8087");
     KafkaProducer producer = new KafkaProducer(props);
 
     String key = "key1";
@@ -110,7 +110,7 @@ not well formed.
 
     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "io.confluent.kafka.serializers.KafkaAvroDeserializer");
-    props.put("schema.registry.url", "http://localhost:8086");
+    props.put("schema.registry.url", "http://localhost:8087");
 
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 

@@ -27,7 +27,7 @@ done
 
 DEFAULT_LINE_READER="--line-reader io.confluent.kafka.formatter.AvroMessageReader"
 
-DEFAULT_SCHEMA_REGISTRY_URL="--property schema.registry.url=http://localhost:8086"
+DEFAULT_SCHEMA_REGISTRY_URL="--property schema.registry.url=http://localhost:8087"
 
 for OPTION in "$@"
 do

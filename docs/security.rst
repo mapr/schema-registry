@@ -53,14 +53,14 @@ create a keytab for |sr|, create a JAAS configuration file, and set the appropri
 In addition to the keytab and JAAS setup, be aware of the `zookeeper.set.acl` setting. This setting, when set to `true`,
 enables |zk| ACLs, which limits access to znodes.
 
-Important: if `zookeeper.set.acl` is set to `true`, |sr|'s service name must be the same as Kafka's, which
-is `kafka` by default. Otherwise, |sr| will fail to create the `_schemas` topic, which will cause a leader
-not available error in the DEBUG log. |sr| log will show `org.apache.kafka.common.errors.TimeoutException: Timeout expired while fetching topic metadata`
-when Kafka does not set |zk| ACLs but |sr| does. |sr|'s service name can be set
+Important: if `zookeeper.set.acl` is set to `true`, the |sr|'s service name must be the same as Kafka's, which
+is `kafka` by default. Otherwise, the |sr| will fail to create the `_schemas` topic, which will cause a leader
+not available error in the DEBUG log. The |sr| log will show `org.apache.kafka.common.errors.TimeoutException: Timeout expired while fetching topic metadata`
+when Kafka does not set |zk| ACLs but the |sr| does. The |sr|'s service name can be set
 either with `kafkastore.sasl.kerberos.service.name` or in the JAAS file.
 
-If |sr| has a different service name than Kafka, at this time `zookeeper.set.acl` must be set to `false`
-in both |sr| and Kafka.
+If the |sr| has a different service name than Kafka, at this time `zookeeper.set.acl` must be set to `false`
+in both the |sr| and Kafka.
 
 
 
@@ -129,7 +129,7 @@ Migrating from HTTP to HTTPS
 
 To upgrade |sr| to allow REST API calls over HTTPS in an existing cluster:
 
-- Add/Modify the ``listeners`` config  to include HTTPS. For example: http://0.0.0.0:8086,https://0.0.0.0:8082
+- Add/Modify the ``listeners`` config  to include HTTPS. For example: http://0.0.0.0:8087,https://0.0.0.0:8082
 - Configure |sr| with appropriate SSL configurations to setup the keystore and optionally truststore
 - Do a rolling bounce of the cluster
 
