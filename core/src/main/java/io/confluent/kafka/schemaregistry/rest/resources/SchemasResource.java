@@ -54,8 +54,9 @@ public class SchemasResource {
   @Path("/ids/{id}")
   @PerformanceMetric("schemas.ids.get-schema")
   public SchemaString getSchema(@PathParam("id") Integer id,
-                                @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(id), auth);
+                                @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(id), auth, cookie);
   }
 
   private SchemaString getSchemaInternal(Integer id) {

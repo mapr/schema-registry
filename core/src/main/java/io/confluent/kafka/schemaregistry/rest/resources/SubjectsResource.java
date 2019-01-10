@@ -72,11 +72,12 @@ public class SubjectsResource {
                                        @QueryParam("deleted") boolean
                                            lookupDeletedSchema,
                                        @NotNull RegisterSchemaRequest request,
-                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
       lookUpSchemaUnderSubjectInternal(asyncResponse, subject, lookupDeletedSchema, request);
       return null;
-    }, auth);
+    }, auth, cookie);
   }
 
   private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String subject,
@@ -103,8 +104,9 @@ public class SubjectsResource {
   @GET
   @Valid
   @PerformanceMetric("subjects.list")
-  public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(), auth);
+  public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                          @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(), auth, cookie);
   }
 
   private Set<String> listInternal() {
@@ -123,11 +125,12 @@ public class SubjectsResource {
   public void deleteSubject(final @Suspended AsyncResponse asyncResponse,
                             @Context HttpHeaders headers,
                             @PathParam("subject") String subject,
-                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                            @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
       deleteSubjectInternal(asyncResponse, headers, subject);
       return null;
-    }, auth);
+    }, auth, cookie);
   }
 
   private void deleteSubjectInternal(AsyncResponse asyncResponse,

@@ -70,11 +70,12 @@ public class CompatibilityResource {
                                        @PathParam("subject") String subject,
                                        @PathParam("version") String version,
                                        @NotNull RegisterSchemaRequest request,
-                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
       lookUpSchemaUnderSubjectInternal(asyncResponse, contentType, accept, subject, version, request);
       return null;
-    }, auth);
+    }, auth, cookie);
   }
 
   private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String contentType,

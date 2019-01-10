@@ -68,9 +68,10 @@ public class ConfigResource {
       @PathParam("subject") String subject,
       @Context HttpHeaders headers,
       @NotNull ConfigUpdateRequest request,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateSubjectLevelConfigInternal(subject, headers, request)
-            , auth);
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateSubjectLevelConfigInternal(subject, headers, request),
+            auth, cookie);
   }
 
   private ConfigUpdateRequest updateSubjectLevelConfigInternal(String subject, HttpHeaders headers,
@@ -115,8 +116,9 @@ public class ConfigResource {
   @Path("/{subject: .+}")
   @GET
   public Config getSubjectLevelConfig(@PathParam("subject") String subject,
-                                      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSubjectLevelConfigInternal(subject), auth);
+                                      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSubjectLevelConfigInternal(subject), auth, cookie);
   }
 
   private Config getSubjectLevelConfigInternal(String subject) {
@@ -139,8 +141,10 @@ public class ConfigResource {
   public ConfigUpdateRequest updateTopLevelConfig(
           @Context HttpHeaders headers,
           @NotNull ConfigUpdateRequest request,
-          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request), auth);
+          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+          @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request),
+            auth, cookie);
   }
 
   private ConfigUpdateRequest updateTopLevelConfigInternal(HttpHeaders headers, ConfigUpdateRequest request) {
@@ -165,8 +169,9 @@ public class ConfigResource {
   }
 
   @GET
-  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getTopLevelConfigInternal(), auth);
+  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                  @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getTopLevelConfigInternal(), auth, cookie);
   }
 
   private Config getTopLevelConfigInternal() {

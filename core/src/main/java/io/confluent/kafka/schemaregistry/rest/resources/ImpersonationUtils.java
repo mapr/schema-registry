@@ -16,6 +16,9 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.mapr.fs.proto.Security;
+import com.mapr.security.MutableInt;
 import com.sun.security.auth.module.UnixSystem;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
@@ -23,9 +26,10 @@ import io.confluent.rest.exceptions.RestServerErrorException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
+import java.net.HttpCookie;
 import java.nio.charset.Charset;
 import java.security.PrivilegedAction;
-import java.util.Base64;
+import java.util.List;
 
 public class ImpersonationUtils {
 
@@ -35,14 +39,55 @@ public class ImpersonationUtils {
         isImpersonationEnabled = config.getBoolean(SchemaRegistryConfig.SCHEMAREGISTRY_IMPERSONATION);
     }
 
-    private static String getUserNameFromAuthentication(String auth){
-        if(auth != null && auth.startsWith("Basic")){
-            int basicLen = 5;
-            String base64Credentials = auth.substring(basicLen).trim();
-            String credentials = new String(Base64.getDecoder().decode(base64Credentials),
-                    Charset.forName("UTF-8"));
-            final String[] values = credentials.split(":",2);
-            return values[0];
+    private static String getUserNameFromAuthenticationOrCookie(String auth, String cookie){
+        if(auth != null){
+            if (auth.startsWith("Basic")) {
+                int basicLen = 5;
+                String base64Credentials = auth.substring(basicLen).trim();
+                String credentials = new String(java.util.Base64.getDecoder().decode(base64Credentials),
+                        Charset.forName("UTF-8"));
+                final String[] values = credentials.split(":",2);
+                return values[0];
+            }
+            if (auth.startsWith("MAPR-Negotiate")) {
+                String authorization = auth.substring("MAPR-Negotiate".length()).trim();
+                try {
+                    byte[] base64decoded = org.apache.commons.codec.binary.Base64.decodeBase64(authorization);
+                    Security.AuthenticationReqFull req = Security.AuthenticationReqFull.parseFrom(base64decoded);
+                    if(req != null && req.getEncryptedTicket() != null) {
+                        byte[] encryptedTicket = req.getEncryptedTicket().toByteArray();
+                        MutableInt err = new MutableInt();
+                        Security.Ticket decryptedTicket = com.mapr.security.Security.DecryptTicket(encryptedTicket, err);
+                        if(err.GetValue() == 0 && decryptedTicket != null) {
+                            Security.CredentialsMsg userCreds = decryptedTicket.getUserCreds();
+                            return userCreds.getUserName();
+                        } else {
+                            String decryptError = "Error while decrypting ticket and key " + err.GetValue();
+                            throw Errors.schemaRegistryException(decryptError, null);
+                        }
+                    } else {
+                        String clientRequestError = "Malformed client request";
+                        throw Errors.schemaRegistryException(clientRequestError, null);
+                    }
+                } catch (InvalidProtocolBufferException e) {
+                    String serverKeyError = "Bad server key";
+                    throw Errors.schemaRegistryException(serverKeyError, e);
+                }
+            }
+        } else {
+            if (cookie != null) {
+                List<HttpCookie> cookies = HttpCookie.parse(cookie);
+                for (HttpCookie httpCookie : cookies) {
+                    if (httpCookie.getName().equals("hadoop.auth")) {
+                        String[] parameters = httpCookie.getValue().split("&");
+                        for (String parameter : parameters) {
+                            if (parameter.startsWith("u=")) {
+                                return parameter.substring("u=".length());
+                            }
+                        }
+                    }
+                }
+            }
         }
         return null;
     }
@@ -51,10 +96,10 @@ public class ImpersonationUtils {
         return new UnixSystem().getUid();
     }
 
-    static <T> T runActionWithAppropriateUser(PrivilegedAction<T> action, String auth) {
+    static <T> T runActionWithAppropriateUser(PrivilegedAction<T> action, String auth, String cookie) {
         if (isImpersonationEnabled) {
             try {
-                String uname = getUserNameFromAuthentication(auth);
+                String uname = getUserNameFromAuthenticationOrCookie(auth, cookie);
                 UserGroupInformation ugi = UserGroupInformation.createProxyUser(uname, UserGroupInformation.getLoginUser());
                 return ugi.doAs(action);
             } catch (IOException e) {

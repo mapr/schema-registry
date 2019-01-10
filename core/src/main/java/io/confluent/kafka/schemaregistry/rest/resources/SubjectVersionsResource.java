@@ -78,8 +78,9 @@ public class SubjectVersionsResource {
   @PerformanceMetric("subjects.versions.get-schema")
   public Schema getSchema(@PathParam("subject") String subject,
                           @PathParam("version") String version,
-                          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(subject, version), auth);
+                          @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                          @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(subject, version), auth, cookie);
   }
 
   private Schema getSchemaInternal(String subject, String version) {
@@ -115,8 +116,9 @@ public class SubjectVersionsResource {
   @PerformanceMetric("subjects.versions.get-schema.only")
   public String getSchemaOnly(@PathParam("subject") String subject,
                               @PathParam("version") String version,
-                              @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaOnlyInternal(subject, version), auth);
+                              @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                              @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaOnlyInternal(subject, version), auth, cookie);
   }
 
   private String getSchemaOnlyInternal(String subject, String version) {
@@ -126,8 +128,9 @@ public class SubjectVersionsResource {
   @GET
   @PerformanceMetric("subjects.versions.list")
   public List<Integer> list(@PathParam("subject") String subject,
-                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(subject), auth);
+                            @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                            @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(subject), auth, cookie);
   }
 
   private List<Integer> listInternal(String subject) {
@@ -169,11 +172,12 @@ public class SubjectVersionsResource {
                        @Context HttpHeaders headers,
                        @PathParam("subject") String subjectName,
                        @NotNull RegisterSchemaRequest request,
-                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
       registerInternal(asyncResponse, headers, subjectName, request);
       return null;
-    }, auth);
+    }, auth, cookie);
   }
 
   private void registerInternal(AsyncResponse asyncResponse, HttpHeaders headers,
@@ -214,11 +218,12 @@ public class SubjectVersionsResource {
                                   @Context HttpHeaders headers,
                                   @PathParam("subject") String subject,
                                   @PathParam("version") String version,
-                                  @HeaderParam(HttpHeaders.AUTHORIZATION) String auth) {
+                                  @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                  @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
       deleteSchemaVersionInternal(asyncResponse, headers, subject, version);
       return null;
-    }, auth);
+    }, auth, cookie);
   }
 
   private void deleteSchemaVersionInternal(AsyncResponse asyncResponse, HttpHeaders headers,
