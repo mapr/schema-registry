@@ -22,6 +22,7 @@
         Schema Registry provides a RESTful interface for storing and retrieving versioned Avro
         schemas for use with Kafka.
     </description>
+    <version>5.1.2.0</version>
 
     <licenses>
         <license>
