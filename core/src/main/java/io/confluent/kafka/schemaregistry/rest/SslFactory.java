@@ -17,10 +17,14 @@ package io.confluent.kafka.schemaregistry.rest;
 
 import com.mapr.web.security.SslConfig;
 import com.mapr.web.security.WebSecurityManager;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.eclipse.jetty.util.StringUtil;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.FileReader;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -129,19 +133,22 @@ public class SslFactory {
   private void createTruststore(String type, String path, String password)
       throws SchemaRegistryException {
 
-    if (path == null || path.isEmpty()) {
-      try(SslConfig sslConfig = WebSecurityManager.getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
-        path = sslConfig.getClientTruststoreLocation();
-      }
+    if (path == null && password != null) {
+      throw new SchemaRegistryException("SSL trust store is not specified, but trust store password is specified.");
     }
 
-    if (password == null || password.isEmpty()) {
+    boolean secureCluster = UserGroupInformation.isSecurityEnabled();
+    if (secureCluster && (path == null || path.isEmpty())) {
       try(SslConfig sslConfig = WebSecurityManager.getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
+        path = sslConfig.getClientTruststoreLocation();
         password = new String(sslConfig.getClientTruststorePassword());
       }
     }
 
-    this.truststore = new SecurityStore(type, path, password);
+    if (StringUtil.isNotBlank(path)) {
+      this.truststore = new SecurityStore(type, path, password);
+    }
+
   }
 
   private static class SecurityStore {
