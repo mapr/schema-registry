@@ -36,12 +36,9 @@
             <outputDirectory>conf.new</outputDirectory>
             <includes>
                 <include>*</include>
-                <!--<include>secure/*</include>-->
+                <include>secure/*</include>
                 <include>unsecure/*</include>
             </includes>
-            <excludes>
-                <exclude>secure</exclude>
-            </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.parent.basedir}/warden</directory>
