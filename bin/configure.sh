@@ -124,7 +124,7 @@ setZookeeperProperty() {
             fi
         done <<< "$(su - mapr -c 'maprcli node listzookeepers')"
 
-        if [ $ZOOKEEPER_NODES != "" ]; then
+        if [ "$ZOOKEEPER_NODES" != "" ]; then
             sed -i -e "s/localhost:5181/$ZOOKEEPER_NODES/g" $SR_CONF_DIR/schema-registry.properties
         else
             echo "ERROR: Zookeeper is not installed on this cluster. Schema Registry configuration process is interrupted."
