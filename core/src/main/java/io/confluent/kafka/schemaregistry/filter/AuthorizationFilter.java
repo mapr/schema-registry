@@ -18,73 +18,127 @@ package io.confluent.kafka.schemaregistry.filter;
 
 
 import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.KAFKASTORE_STREAM_CONFIG;
-import static io.confluent.kafka.schemaregistry.rest.resources.ImpersonationUtils.getUserNameFromAuthentication;
 import static java.lang.String.format;
-import static javax.ws.rs.HttpMethod.GET;
-import static javax.ws.rs.HttpMethod.POST;
+import static javax.ws.rs.HttpMethod.*;
 
-import com.mapr.streams.Admin;
-import com.mapr.streams.StreamDescriptor;
-import com.mapr.streams.Streams;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.AuthorizationException;
-import java.io.IOException;
-import java.util.Arrays;
+import io.confluent.kafka.schemaregistry.rest.resources.ImpersonationUtils;
+import io.confluent.kafka.schemaregistry.filter.util.KafkaConsumerPool;
+import io.confluent.kafka.schemaregistry.storage.KafkaProducerPool;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.core.HttpHeaders;
-import org.apache.hadoop.conf.Configuration;
+import javax.ws.rs.core.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class AuthorizationFilter implements ContainerRequestFilter {
 
-  private static final Logger logger = LoggerFactory.getLogger(AuthorizationFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthorizationFilter.class);
 
-  private static final String COLON_DELIMITER = ":";
-  private static final String PIPE_DELIMITER = "|";
-  private static final String PERMIT_ALL_PERMISSION = "p";
+    private static final String INTERNAL_TOPIC = "schema-registry-authorization-auxiliary-topic";
 
-  private SchemaRegistryConfig schemaRegistryConfig;
+    private final KafkaConsumerPool kafkaConsumerPool;
+    private final KafkaProducerPool kafkaProducerPool;
+    private final String internalTopic;
 
-  public AuthorizationFilter(SchemaRegistryConfig schemaRegistryConfig) {
-    this.schemaRegistryConfig = schemaRegistryConfig;
-  }
-
-  @Override
-  public void filter(ContainerRequestContext requestContext) throws IOException {
-    String authentication = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-    String username = getUserNameFromAuthentication(authentication);
-    logger.debug("Authorization for user: {}", username);
-
-    StreamDescriptor descriptor = getStreamDescriptor();
-    String method = requestContext.getMethod();
-    checkUserPermissions(username, method, GET, descriptor.getConsumePerms());
-    checkUserPermissions(username, method, POST, descriptor.getProducePerms());
-  }
-
-  private void checkUserPermissions(String username, String currentMethod, String method,
-      String permissions) {
-    if (currentMethod.equals(method) && !checkExpression(permissions, username)) {
-      throwAuthorizationException(username);
+    public AuthorizationFilter(SchemaRegistryConfig schemaRegistryConfig) {
+        this.internalTopic = format("%s:%s", schemaRegistryConfig.getString(KAFKASTORE_STREAM_CONFIG), INTERNAL_TOPIC);
+        this.kafkaConsumerPool = new KafkaConsumerPool(getConsumerProperties(), internalTopic);
+        this.kafkaProducerPool = new KafkaProducerPool(getProducerProperties());
+        this.initializeInternalTopicWithDummyRecord();
     }
-  }
 
-  private StreamDescriptor getStreamDescriptor() throws IOException {
-    Admin streamAdmin = Streams.newAdmin(new Configuration());
-    String streamName = schemaRegistryConfig.getString(KAFKASTORE_STREAM_CONFIG);
-    return streamAdmin.getStreamDescriptor(streamName);
-  }
+    @Override
+    public void filter(ContainerRequestContext requestContext) {
+        String authentication = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+        String cookie = retrieveCookie(requestContext);
+        try {
+            ImpersonationUtils.runActionWithAppropriateUser(() -> {
+                checkPermissions(requestContext);
+                return null;
+            }, authentication, cookie);
+        } catch (Exception e) {
+            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
+                    .entity(e.getMessage())
+                    .build());
+        }
+    }
 
-  private void throwAuthorizationException(String username) {
-    logger.error(format("Access denied for user %s", username));
-    throw new AuthorizationException(format("Access denied for user %s", username));
-  }
+    private void initializeInternalTopicWithDummyRecord(){
+        try {
+            /** The method below is used to write initial record to INTERNAL_TOPIC.
+             * It will not fail because authorization filter is created as cluster admin user.
+             * Cluster admin user has appropriate permissions to send records to internal stream.
+             */
+            this.checkWritingPermissions();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new KafkaException(e);
+        }
+    }
 
-  // TODO: Find out the way to parse complex expression
-  private boolean checkExpression(String expression, String username) {
-    return expression.equals(PERMIT_ALL_PERMISSION) || Arrays.stream(expression.split(PIPE_DELIMITER))
-        .map(text -> text.split(COLON_DELIMITER)[1])
-        .anyMatch(text -> text.equals(username));
-  }
+    private void checkPermissions(ContainerRequestContext requestContext) {
+        try {
+            String method = requestContext.getMethod();
+            if (method.equals(GET)) {
+                checkReadingPermissions();
+            } else if (method.equals(POST) || method.equals(DELETE)) {
+                checkWritingPermissions();
+            }
+        } catch (Exception e) {
+            throw new AuthorizationException("Access denied. This operation is not permitted for current user\n");
+        }
+    }
+
+    private void checkWritingPermissions() throws ExecutionException, InterruptedException {
+        ProducerRecord<byte[], byte[]> record = new ProducerRecord<>(
+                internalTopic,
+                new byte[0]);
+        kafkaProducerPool.send(record).get();
+    }
+
+    private void checkReadingPermissions() {
+        ConsumerRecords<byte[], byte[]> records = kafkaConsumerPool.poll();
+        if(records.count() < 1){
+            throw new AuthorizationException("Access denied. This operation is not permitted for current user\n");
+        }
+    }
+
+    private String retrieveCookie(ContainerRequestContext requestContext) {
+        Map<String, Cookie> cookies = requestContext.getCookies();
+        return cookies.values().stream().map(Cookie::getValue).findAny().orElse(null);
+    }
+
+    private Properties getProducerProperties() {
+        Properties properties = new Properties();
+        properties.put(ProducerConfig.ACKS_CONFIG, "-1");
+        properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.ByteArraySerializer.class);
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.ByteArraySerializer.class);
+        properties.put(ProducerConfig.RETRIES_CONFIG, 0);
+        properties.put("streams.buffer.max.time.ms", "0");
+        return properties;
+    }
+
+    private Properties getConsumerProperties() {
+        Properties properties = new Properties();
+        properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.ByteArrayDeserializer.class);
+        properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                org.apache.kafka.common.serialization.ByteArrayDeserializer.class);
+        return properties;
+    }
+
 }

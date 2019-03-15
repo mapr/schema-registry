@@ -83,7 +83,11 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new SchemasResource(schemaRegistry));
     config.register(new SubjectVersionsResource(schemaRegistry));
     config.register(new CompatibilityResource(schemaRegistry));
-    config.register(new AuthorizationFilter(schemaRegistryConfig));
+
+    if(schemaRegistryConfig.getString(SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG)
+            .equals(SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH)) {
+      config.register(new AuthorizationFilter(schemaRegistryConfig));
+    }
 
     if (schemaRegistryResourceExtensions != null) {
       try {

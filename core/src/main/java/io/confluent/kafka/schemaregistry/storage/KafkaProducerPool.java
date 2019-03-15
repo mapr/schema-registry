@@ -23,13 +23,13 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 public class KafkaProducerPool {
-    private Map<UserGroupInformation, KafkaProducer<byte[], byte[]>> producers = new HashMap<>();
+    private Map<UserGroupInformation, KafkaProducer<byte[], byte[]>> producers = new ConcurrentHashMap<>();
 
     private Properties properties;
 
@@ -44,7 +44,7 @@ public class KafkaProducerPool {
             KafkaProducer<byte[], byte[]> producer = producers.get(user);
 
             if (producer == null) {
-                producer = new KafkaProducer<byte[], byte[]>(properties);
+                producer = new KafkaProducer<>(properties);
                 producers.put(user, producer);
             }
 
@@ -55,7 +55,7 @@ public class KafkaProducerPool {
     }
 
     public void close() {
-        for(KafkaProducer producer: producers.values()) {
+        for (KafkaProducer producer: producers.values()) {
             producer.close();
         }
     }

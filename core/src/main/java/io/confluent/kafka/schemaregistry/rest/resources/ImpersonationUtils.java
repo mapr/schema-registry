@@ -39,14 +39,14 @@ public class ImpersonationUtils {
         isImpersonationEnabled = config.getBoolean(SchemaRegistryConfig.SCHEMAREGISTRY_IMPERSONATION);
     }
 
-    private static String getUserNameFromAuthenticationOrCookie(String auth, String cookie){
-        if(auth != null){
+    private static String getUserNameFromAuthenticationOrCookie(String auth, String cookie) {
+        if (auth != null) {
             if (auth.startsWith("Basic")) {
                 int basicLen = 5;
                 String base64Credentials = auth.substring(basicLen).trim();
                 String credentials = new String(java.util.Base64.getDecoder().decode(base64Credentials),
                         Charset.forName("UTF-8"));
-                final String[] values = credentials.split(":",2);
+                final String[] values = credentials.split(":", 2);
                 return values[0];
             }
             if (auth.startsWith("MAPR-Negotiate")) {
@@ -54,11 +54,11 @@ public class ImpersonationUtils {
                 try {
                     byte[] base64decoded = org.apache.commons.codec.binary.Base64.decodeBase64(authorization);
                     Security.AuthenticationReqFull req = Security.AuthenticationReqFull.parseFrom(base64decoded);
-                    if(req != null && req.getEncryptedTicket() != null) {
+                    if (req != null && req.getEncryptedTicket() != null) {
                         byte[] encryptedTicket = req.getEncryptedTicket().toByteArray();
                         MutableInt err = new MutableInt();
                         Security.Ticket decryptedTicket = com.mapr.security.Security.DecryptTicket(encryptedTicket, err);
-                        if(err.GetValue() == 0 && decryptedTicket != null) {
+                        if (err.GetValue() == 0 && decryptedTicket != null) {
                             Security.CredentialsMsg userCreds = decryptedTicket.getUserCreds();
                             return userCreds.getUserName();
                         } else {
@@ -96,11 +96,11 @@ public class ImpersonationUtils {
         return new UnixSystem().getUid();
     }
 
-    static <T> T runActionWithAppropriateUser(PrivilegedAction<T> action, String auth, String cookie) {
+    public static <T> T runActionWithAppropriateUser(PrivilegedAction<T> action, String auth, String cookie) {
         if (isImpersonationEnabled) {
             try {
-                String uname = getUserNameFromAuthenticationOrCookie(auth, cookie);
-                UserGroupInformation ugi = UserGroupInformation.createProxyUser(uname, UserGroupInformation.getLoginUser());
+                String username = getUserNameFromAuthenticationOrCookie(auth, cookie);
+                UserGroupInformation ugi = UserGroupInformation.createProxyUser(username, UserGroupInformation.getLoginUser());
                 return ugi.doAs(action);
             } catch (IOException e) {
                 throw Errors.serverLoginException(e);
