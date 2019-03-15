@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
+import io.confluent.kafka.schemaregistry.filter.AuthorizationFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,6 +83,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new SchemasResource(schemaRegistry));
     config.register(new SubjectVersionsResource(schemaRegistry));
     config.register(new CompatibilityResource(schemaRegistry));
+    config.register(new AuthorizationFilter(schemaRegistryConfig));
 
     if (schemaRegistryResourceExtensions != null) {
       try {
