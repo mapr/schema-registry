@@ -42,4 +42,10 @@
     <suppress checks="BooleanExpressionComplexity"
               files="AvroData.java"/>
 
+    <suppress checks="CommentsIndentation"
+              files="."/>
+
+    <suppress checks="CyclomaticComplexity"
+      files="."/>
+
 </suppressions>

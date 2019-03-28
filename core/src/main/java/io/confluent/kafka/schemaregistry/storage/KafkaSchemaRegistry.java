@@ -16,7 +16,6 @@
 package io.confluent.kafka.schemaregistry.storage;
 
 import org.apache.avro.reflect.Nullable;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,16 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.TimeUnit;
 
-import io.confluent.common.metrics.JmxReporter;
-import io.confluent.common.metrics.MetricConfig;
-import io.confluent.common.metrics.MetricName;
-import io.confluent.common.metrics.Metrics;
-import io.confluent.common.metrics.MetricsReporter;
-import io.confluent.common.metrics.Sensor;
-import io.confluent.common.metrics.stats.Gauge;
-import io.confluent.common.utils.SystemTime;
 import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroUtils;

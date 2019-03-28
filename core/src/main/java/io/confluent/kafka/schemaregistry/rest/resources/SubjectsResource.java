@@ -81,10 +81,10 @@ public class SubjectsResource {
   }
 
   private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String subject,
-                                                boolean lookupDeletedSchema, RegisterSchemaRequest request) {
+      boolean lookupDeletedSchema, RegisterSchemaRequest request) {
     // returns version if the schema exists. Otherwise returns 404
     Schema schema = new Schema(subject, 0, 0, request.getSchema());
-    io.confluent.kafka.schemaregistry.client.rest.entities.Schema matchingSchema = null;
+    io.confluent.kafka.schemaregistry.client.rest.entities.Schema matchingSchema;
     try {
       if (!schemaRegistry.listSubjects().contains(subject)) {
         throw Errors.subjectNotFoundException();
@@ -106,7 +106,7 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.list")
   public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(this::listInternal, auth, cookie);
   }
 
   private Set<String> listInternal() {

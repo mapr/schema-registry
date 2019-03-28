@@ -70,13 +70,13 @@ public class ConfigResource {
       @NotNull ConfigUpdateRequest request,
       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateSubjectLevelConfigInternal(subject, headers, request),
-            auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        () -> updateSubjectLevelConfigInternal(subject, headers, request), auth, cookie);
   }
 
   private ConfigUpdateRequest updateSubjectLevelConfigInternal(String subject, HttpHeaders headers,
                                                                ConfigUpdateRequest request) {
-    Set<String> subjects = null;
+    Set<String> subjects;
     try {
       subjects = schemaRegistry.listSubjects();
     } catch (SchemaRegistryStoreException e) {
@@ -118,11 +118,12 @@ public class ConfigResource {
   public Config getSubjectLevelConfig(@PathParam("subject") String subject,
                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSubjectLevelConfigInternal(subject), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(() ->
+        getSubjectLevelConfigInternal(subject), auth, cookie);
   }
 
   private Config getSubjectLevelConfigInternal(String subject) {
-    Config config = null;
+    Config config;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(subject);
       if (compatibilityLevel == null) {
@@ -143,11 +144,13 @@ public class ConfigResource {
           @NotNull ConfigUpdateRequest request,
           @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request),
-            auth, cookie);
+    return ImpersonationUtils
+        .runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request), auth,
+            cookie);
   }
 
-  private ConfigUpdateRequest updateTopLevelConfigInternal(HttpHeaders headers, ConfigUpdateRequest request) {
+  private ConfigUpdateRequest updateTopLevelConfigInternal(HttpHeaders headers,
+      ConfigUpdateRequest request) {
     AvroCompatibilityLevel compatibilityLevel =
         AvroCompatibilityLevel.forName(request.getCompatibilityLevel());
     if (compatibilityLevel == null) {
@@ -171,11 +174,12 @@ public class ConfigResource {
   @GET
   public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                   @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getTopLevelConfigInternal(), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        this::getTopLevelConfigInternal, auth, cookie);
   }
 
   private Config getTopLevelConfigInternal() {
-    Config config = null;
+    Config config;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(null);
       config = new Config(compatibilityLevel == null ? null : compatibilityLevel.name);

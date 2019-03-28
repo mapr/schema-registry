@@ -56,11 +56,12 @@ public class SchemasResource {
   public SchemaString getSchema(@PathParam("id") Integer id,
                                 @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                 @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(id), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        () -> getSchemaInternal(id), auth, cookie);
   }
 
   private SchemaString getSchemaInternal(Integer id) {
-    SchemaString schema = null;
+    SchemaString schema;
     String errorMessage = "Error while retrieving schema with id " + id + " from the schema "
                           + "registry";
     try {

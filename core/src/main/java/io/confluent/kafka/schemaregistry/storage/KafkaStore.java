@@ -203,7 +203,8 @@ public class KafkaStore<K, V> implements Store<K, V> {
                + "crucial to add more brokers and increase the replication factor of the topic.");
     }
 
-    NewTopic schemaTopicRequest = new NewTopic(fullTopicName, 1, (short) schemaTopicReplicationFactor);
+    NewTopic schemaTopicRequest = new NewTopic(fullTopicName, 1,
+        (short) schemaTopicReplicationFactor);
     schemaTopicRequest.configs(
         Collections.singletonMap(
             TopicConfig.CLEANUP_POLICY_CONFIG,
@@ -236,8 +237,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
     TopicDescription description = topicDescription.get(fullTopicName);
     final int numPartitions = description.partitions().size();
     if (numPartitions != 1) {
-      throw new StoreInitializationException("The schema topic " + fullTopicName + " should have only 1 "
-                                             + "partition but has " + numPartitions);
+      throw new StoreInitializationException(
+          "The schema topic " + fullTopicName + " should have only 1 "
+              + "partition but has " + numPartitions);
     }
 
     if (description.partitions().get(0).replicas().size() < desiredReplicationFactor) {
@@ -262,9 +264,10 @@ public class KafkaStore<K, V> implements Store<K, V> {
                 + "deleting your schemas after a week. "
                 + "Refer to Kafka documentation for more details on cleanup policies");
 
-      throw new StoreInitializationException("The retention policy of the schema topic " + fullTopicName
-                                             + " is incorrect. Expected cleanup.policy to be "
-                                             + "'compact' but it is " + retentionPolicy);
+      throw new StoreInitializationException(
+          "The retention policy of the schema topic " + fullTopicName
+              + " is incorrect. Expected cleanup.policy to be "
+              + "'compact' but it is " + retentionPolicy);
 
     }
   }
@@ -297,12 +300,12 @@ public class KafkaStore<K, V> implements Store<K, V> {
     }
 
     // write to the Kafka topic
-    ProducerRecord<byte[], byte[]> producerRecord = null;
+    ProducerRecord<byte[], byte[]> producerRecord;
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(fullTopicName, 0, this.serializer.serializeKey(key),
-                                             value == null ? null : this.serializer.serializeValue(
-                                                 value));
+          new ProducerRecord<>(fullTopicName, 0, this.serializer.serializeKey(key),
+              value == null ? null : this.serializer.serializeValue(
+                  value));
     } catch (SerializationException e) {
       throw new StoreException("Error serializing schema while creating the Kafka produce "
                                + "record", e);
@@ -413,7 +416,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(fullTopicName, 0, this.serializer.serializeKey(noopKey), null);
+          new ProducerRecord<>(fullTopicName, 0, this.serializer.serializeKey(noopKey), null);
     } catch (SerializationException e) {
       throw new StoreException("Failed to serialize noop key.", e);
     }

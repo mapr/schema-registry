@@ -73,7 +73,8 @@ public class CompatibilityResource {
                                        @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                        @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      lookUpSchemaUnderSubjectInternal(asyncResponse, contentType, accept, subject, version, request);
+      lookUpSchemaUnderSubjectInternal(asyncResponse, contentType, accept, subject, version,
+          request);
       return null;
     }, auth, cookie);
   }
@@ -83,7 +84,7 @@ public class CompatibilityResource {
                                                 String version, RegisterSchemaRequest request) {
     // returns true if posted schema is compatible with the specified version. "latest" is
     // a special version
-    Map<String, String> headerProperties = new HashMap<String, String>();
+    Map<String, String> headerProperties = new HashMap<>();
     headerProperties.put("Content-Type", contentType);
     headerProperties.put("Accept", accept);
     boolean isCompatible = false;

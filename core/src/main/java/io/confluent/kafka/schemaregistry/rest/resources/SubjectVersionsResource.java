@@ -80,17 +80,18 @@ public class SubjectVersionsResource {
                           @PathParam("version") String version,
                           @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaInternal(subject, version), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        () -> getSchemaInternal(subject, version), auth, cookie);
   }
 
   private Schema getSchemaInternal(String subject, String version) {
-    VersionId versionId = null;
+    VersionId versionId;
     try {
       versionId = new VersionId(version);
     } catch (InvalidVersionException e) {
       throw Errors.invalidVersionException();
     }
-    Schema schema = null;
+    Schema schema;
     String errorMessage = null;
     try {
       schema = schemaRegistry.validateAndGetSchema(subject, versionId, false);
@@ -118,7 +119,8 @@ public class SubjectVersionsResource {
                               @PathParam("version") String version,
                               @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                               @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> getSchemaOnlyInternal(subject, version), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        () -> getSchemaOnlyInternal(subject, version), auth, cookie);
   }
 
   private String getSchemaOnlyInternal(String subject, String version) {
@@ -130,13 +132,14 @@ public class SubjectVersionsResource {
   public List<Integer> list(@PathParam("subject") String subject,
                             @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                             @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() -> listInternal(subject), auth, cookie);
+    return ImpersonationUtils.runActionWithAppropriateUser(
+        () -> listInternal(subject), auth, cookie);
   }
 
   private List<Integer> listInternal(String subject) {
     // check if subject exists. If not, throw 404
-    Iterator<Schema> allSchemasForThisTopic = null;
-    List<Integer> allVersions = new ArrayList<Integer>();
+    Iterator<Schema> allSchemasForThisTopic;
+    List<Integer> allVersions = new ArrayList<>();
     String errorMessage = "Error while validating that subject "
                           + subject
                           + " exists in the registry";
@@ -185,7 +188,7 @@ public class SubjectVersionsResource {
     Map<String, String> headerProperties = requestHeaderBuilder.buildRequestHeaders(headers);
 
     Schema schema = new Schema(subjectName, 0, 0, request.getSchema());
-    int id = 0;
+    int id;
     try {
       id = schemaRegistry.registerOrForward(subjectName, schema, headerProperties);
     } catch (InvalidSchemaException e) {
@@ -228,13 +231,13 @@ public class SubjectVersionsResource {
 
   private void deleteSchemaVersionInternal(AsyncResponse asyncResponse, HttpHeaders headers,
                                            String subject, String version) {
-    VersionId versionId = null;
+    VersionId versionId;
     try {
       versionId = new VersionId(version);
     } catch (InvalidVersionException e) {
       throw Errors.invalidVersionException();
     }
-    Schema schema = null;
+    Schema schema;
     String errorMessage = null;
     try {
       schema = schemaRegistry.validateAndGetSchema(subject, versionId, false);
