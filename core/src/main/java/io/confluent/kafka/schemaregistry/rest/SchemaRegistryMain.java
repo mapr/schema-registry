@@ -15,7 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
-import io.confluent.kafka.schemaregistry.rest.resources.ImpersonationUtils;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.eclipse.jetty.server.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

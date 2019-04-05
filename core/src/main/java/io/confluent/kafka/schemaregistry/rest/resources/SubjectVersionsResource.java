@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,11 +81,11 @@ public class SubjectVersionsResource {
                           @PathParam("version") String version,
                           @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        () -> getSchemaInternal(subject, version), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchema(subject, version), auth, cookie);
   }
 
-  private Schema getSchemaInternal(String subject, String version) {
+  private Schema getSchema(String subject, String version) {
     VersionId versionId;
     try {
       versionId = new VersionId(version);
@@ -119,12 +120,12 @@ public class SubjectVersionsResource {
                               @PathParam("version") String version,
                               @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                               @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        () -> getSchemaOnlyInternal(subject, version), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaOnly(subject, version), auth, cookie);
   }
 
-  private String getSchemaOnlyInternal(String subject, String version) {
-    return getSchemaInternal(subject, version).getSchema();
+  private String getSchemaOnly(String subject, String version) {
+    return getSchema(subject, version).getSchema();
   }
 
   @GET
@@ -132,11 +133,11 @@ public class SubjectVersionsResource {
   public List<Integer> list(@PathParam("subject") String subject,
                             @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                             @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        () -> listInternal(subject), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> list(subject), auth, cookie);
   }
 
-  private List<Integer> listInternal(String subject) {
+  private List<Integer> list(String subject) {
     // check if subject exists. If not, throw 404
     Iterator<Schema> allSchemasForThisTopic;
     List<Integer> allVersions = new ArrayList<>();
@@ -177,13 +178,13 @@ public class SubjectVersionsResource {
                        @NotNull RegisterSchemaRequest request,
                        @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                        @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      registerInternal(asyncResponse, headers, subjectName, request);
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      register(asyncResponse, headers, subjectName, request);
       return null;
     }, auth, cookie);
   }
 
-  private void registerInternal(AsyncResponse asyncResponse, HttpHeaders headers,
+  private void register(AsyncResponse asyncResponse, HttpHeaders headers,
                                String subjectName, RegisterSchemaRequest request) {
     Map<String, String> headerProperties = requestHeaderBuilder.buildRequestHeaders(headers);
 
@@ -223,13 +224,13 @@ public class SubjectVersionsResource {
                                   @PathParam("version") String version,
                                   @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                   @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      deleteSchemaVersionInternal(asyncResponse, headers, subject, version);
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      deleteSchemaVersion(asyncResponse, headers, subject, version);
       return null;
     }, auth, cookie);
   }
 
-  private void deleteSchemaVersionInternal(AsyncResponse asyncResponse, HttpHeaders headers,
+  private void deleteSchemaVersion(AsyncResponse asyncResponse, HttpHeaders headers,
                                            String subject, String version) {
     VersionId versionId;
     try {
