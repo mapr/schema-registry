@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,13 +75,13 @@ public class SubjectsResource {
                                        @NotNull RegisterSchemaRequest request,
                                        @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                        @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      lookUpSchemaUnderSubjectInternal(asyncResponse, subject, lookupDeletedSchema, request);
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      lookUpSchemaUnderSubject(asyncResponse, subject, lookupDeletedSchema, request);
       return null;
     }, auth, cookie);
   }
 
-  private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String subject,
+  private void lookUpSchemaUnderSubject(AsyncResponse asyncResponse, String subject,
       boolean lookupDeletedSchema, RegisterSchemaRequest request) {
     // returns version if the schema exists. Otherwise returns 404
     Schema schema = new Schema(subject, 0, 0, request.getSchema());
@@ -106,10 +107,10 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.list")
   public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(this::listInternal, auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(this::list, auth, cookie);
   }
 
-  private Set<String> listInternal() {
+  private Set<String> list() {
     try {
       return schemaRegistry.listSubjects();
     } catch (SchemaRegistryStoreException e) {
@@ -127,13 +128,13 @@ public class SubjectsResource {
                             @PathParam("subject") String subject,
                             @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                             @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      deleteSubjectInternal(asyncResponse, headers, subject);
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      deleteSubject(asyncResponse, headers, subject);
       return null;
     }, auth, cookie);
   }
 
-  private void deleteSubjectInternal(AsyncResponse asyncResponse,
+  private void deleteSubject(AsyncResponse asyncResponse,
                                      HttpHeaders headers,
                                      String subject) {
     List<Integer> deletedVersions;

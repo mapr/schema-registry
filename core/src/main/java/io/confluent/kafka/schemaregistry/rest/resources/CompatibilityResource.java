@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,14 +73,14 @@ public class CompatibilityResource {
                                        @NotNull RegisterSchemaRequest request,
                                        @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                        @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    ImpersonationUtils.runActionWithAppropriateUser(() -> {
-      lookUpSchemaUnderSubjectInternal(asyncResponse, contentType, accept, subject, version,
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      lookUpSchemaUnderSubject(asyncResponse, contentType, accept, subject, version,
           request);
       return null;
     }, auth, cookie);
   }
 
-  private void lookUpSchemaUnderSubjectInternal(AsyncResponse asyncResponse, String contentType,
+  private void lookUpSchemaUnderSubject(AsyncResponse asyncResponse, String contentType,
                                                 String accept, String subject,
                                                 String version, RegisterSchemaRequest request) {
     // returns true if posted schema is compatible with the specified version. "latest" is

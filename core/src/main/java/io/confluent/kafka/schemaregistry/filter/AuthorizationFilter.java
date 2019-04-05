@@ -24,7 +24,6 @@ import static javax.ws.rs.HttpMethod.POST;
 import io.confluent.kafka.schemaregistry.filter.util.KafkaConsumerPool;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.AuthorizationException;
-import io.confluent.kafka.schemaregistry.rest.resources.ImpersonationUtils;
 import io.confluent.kafka.schemaregistry.storage.KafkaProducerPool;
 import java.util.Map;
 import java.util.Properties;
@@ -34,6 +33,7 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -66,7 +66,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     String authentication = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
     String cookie = retrieveCookie(requestContext);
     try {
-      ImpersonationUtils.runActionWithAppropriateUser(() -> {
+      ImpersonationUtils.runAsUser(() -> {
         checkPermissions(requestContext);
         return null;
       }, authentication, cookie);

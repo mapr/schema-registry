@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,11 +57,11 @@ public class SchemasResource {
   public SchemaString getSchema(@PathParam("id") Integer id,
                                 @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                 @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        () -> getSchemaInternal(id), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchema(id), auth, cookie);
   }
 
-  private SchemaString getSchemaInternal(Integer id) {
+  private SchemaString getSchema(Integer id) {
     SchemaString schema;
     String errorMessage = "Error while retrieving schema with id " + id + " from the schema "
                           + "registry";

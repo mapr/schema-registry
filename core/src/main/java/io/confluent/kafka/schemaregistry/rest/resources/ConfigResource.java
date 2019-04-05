@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,11 +71,11 @@ public class ConfigResource {
       @NotNull ConfigUpdateRequest request,
       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        () -> updateSubjectLevelConfigInternal(subject, headers, request), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> updateSubjectLevelConfig(subject, headers, request), auth, cookie);
   }
 
-  private ConfigUpdateRequest updateSubjectLevelConfigInternal(String subject, HttpHeaders headers,
+  private ConfigUpdateRequest updateSubjectLevelConfig(String subject, HttpHeaders headers,
                                                                ConfigUpdateRequest request) {
     Set<String> subjects;
     try {
@@ -118,11 +119,11 @@ public class ConfigResource {
   public Config getSubjectLevelConfig(@PathParam("subject") String subject,
                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(() ->
-        getSubjectLevelConfigInternal(subject), auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+        getSubjectLevelConfig(subject), auth, cookie);
   }
 
-  private Config getSubjectLevelConfigInternal(String subject) {
+  private Config getSubjectLevelConfig(String subject) {
     Config config;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(subject);
@@ -144,12 +145,11 @@ public class ConfigResource {
           @NotNull ConfigUpdateRequest request,
           @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils
-        .runActionWithAppropriateUser(() -> updateTopLevelConfigInternal(headers, request), auth,
-            cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+        updateTopLevelConfig(headers, request), auth, cookie);
   }
 
-  private ConfigUpdateRequest updateTopLevelConfigInternal(HttpHeaders headers,
+  private ConfigUpdateRequest updateTopLevelConfig(HttpHeaders headers,
       ConfigUpdateRequest request) {
     AvroCompatibilityLevel compatibilityLevel =
         AvroCompatibilityLevel.forName(request.getCompatibilityLevel());
@@ -174,11 +174,11 @@ public class ConfigResource {
   @GET
   public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                   @HeaderParam(HttpHeaders.COOKIE) String cookie) {
-    return ImpersonationUtils.runActionWithAppropriateUser(
-        this::getTopLevelConfigInternal, auth, cookie);
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        this::getTopLevelConfig, auth, cookie);
   }
 
-  private Config getTopLevelConfigInternal() {
+  private Config getTopLevelConfig() {
     Config config;
     try {
       AvroCompatibilityLevel compatibilityLevel = schemaRegistry.getCompatibilityLevel(null);
