@@ -11,6 +11,12 @@ MAPR_WARDEN_CONF_DIR="${MAPR_HOME}/conf/conf.d"
 DAEMON_CONF="$MAPR_HOME/conf/daemon.conf"
 WARDEN_SR_CONF="$SR_HOME"/warden/warden.schemaregistry.conf
 WARDEN_SR_DEST="$MAPR_WARDEN_CONF_DIR/warden.schemaregistry.conf"
+
+WARDEN_HEAPSIZE_MIN_KEY="service.heapsize.min"
+WARDEN_HEAPSIZE_MAX_KEY="service.heapsize.max"
+WARDEN_HEAPSIZE_PERCENT_KEY="service.heapsize.percent"
+WARDEN_RUNSTATE_KEY="service.runstate"
+
 HADOOP_VER=$(cat "$MAPR_HOME/hadoop/hadoopversion")
 secureCluster=0
 MAPR_USER=""
@@ -64,17 +70,47 @@ EOF
   chown -R $MAPR_USER:$MAPR_GROUP "${MAPR_CONF_DIR}/restart/schemaregistry-$SR_VERSION.restart"
 }
 
-#
-# Copying the warden service config file
-#
+conf_get_property() {
+  local conf_file="$1"
+  local property_name="$2"
+  local delim="="
+  grep "^\s*${property_name}" "${conf_file}" | sed "s|^\s*${property_name}\s*${delim}\s*||"
+}
+
+conf_set_property() {
+  local conf_file="$1"
+  local property_name="$2"
+  local property_value="$3"
+  local delim="="
+  if grep -q "^\s*${property_name}\s*${delim}" "${conf_file}"; then
+    # modify property
+    sed -i -r "s|^\s*${property_name}\s*${delim}.*$|${property_name}${delim}${property_value}|" "${conf_file}"
+  else
+    echo "${property_name}${delim}${property_value}" >> "${conf_file}"
+  fi
+}
+
 setupWardenConfFile() {
-  if ! [ -d ${MAPR_WARDEN_CONF_DIR} ]; then
-    mkdir -p ${MAPR_WARDEN_CONF_DIR} > /dev/null 2>&1
+  local curr_heapsize_min
+  local curr_heapsize_max
+  local curr_heapsize_percent
+  local curr_runstate
+
+  if [ -f "$WARDEN_SR_DEST" ]; then
+    curr_heapsize_min=$(conf_get_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_MIN_KEY")
+    curr_heapsize_max=$(conf_get_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_MAX_KEY")
+    curr_heapsize_percent=$(conf_get_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_PERCENT_KEY")
+    curr_runstate=$(conf_get_property "$WARDEN_SR_DEST" "$WARDEN_RUNSTATE_KEY")
   fi
 
-  # Install warden file
-  cp ${WARDEN_SR_CONF} ${MAPR_WARDEN_CONF_DIR}
-  chown $MAPR_USER:$MAPR_GROUP $WARDEN_SR_DEST
+  cp ${WARDEN_SR_CONF} ${WARDEN_SR_DEST}
+
+  [ -n "$curr_heapsize_min" ] && conf_set_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_MIN_KEY" "$curr_heapsize_min"
+  [ -n "$curr_heapsize_max" ] && conf_set_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_MAX_KEY" "$curr_heapsize_max"
+  [ -n "$curr_heapsize_percent" ] && conf_set_property "$WARDEN_SR_DEST" "$WARDEN_HEAPSIZE_PERCENT_KEY" "$curr_heapsize_percent"
+  [ -n "$curr_runstate" ] && conf_set_property "$WARDEN_SR_DEST" "$WARDEN_RUNSTATE_KEY" "$curr_runstate"
+
+  chown $MAPR_USER:$MAPR_GROUP "$WARDEN_SR_DEST"
 }
 
 function getProperty() {
