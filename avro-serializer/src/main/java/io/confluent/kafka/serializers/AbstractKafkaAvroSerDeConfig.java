@@ -26,6 +26,7 @@ import io.confluent.common.config.ConfigDef.Type;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
 import io.confluent.kafka.serializers.subject.TopicNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Base class for configs for serializers and deserializers, defining a few common configs and
@@ -55,6 +56,13 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
   public static final String BASIC_AUTH_CREDENTIALS_SOURCE_DOC =
       "Specify how to pick the credentials for Basic uth header. "
       + "The supported values are URL, USER_INFO and SASL_INHERIT";
+
+  public static final String MAPRSASL_AUTH_CONFIG = SchemaRegistryClientConfig
+          .MAPRSASL_AUTH_CONFIG;
+  public static final Boolean MAPRSASL_AUTH_DEFAULT =  UserGroupInformation.isSecurityEnabled();
+  public static final String MAPRSASL_AUTH_DOC =
+          "Enable MapR Sasl authentication for Avro Serializer/Deserializer. "
+                  + "The supported values are true, false.";
 
   @Deprecated
   public static final String SCHEMA_REGISTRY_USER_INFO_CONFIG =
@@ -91,6 +99,8 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
                 Importance.MEDIUM, AUTO_REGISTER_SCHEMAS_DOC)
         .define(BASIC_AUTH_CREDENTIALS_SOURCE, Type.STRING, BASIC_AUTH_CREDENTIALS_SOURCE_DEFAULT,
             Importance.MEDIUM, BASIC_AUTH_CREDENTIALS_SOURCE_DOC)
+        .define(MAPRSASL_AUTH_CONFIG, Type.BOOLEAN, MAPRSASL_AUTH_DEFAULT,
+                    Importance.MEDIUM, MAPRSASL_AUTH_DOC)
         .define(SCHEMA_REGISTRY_USER_INFO_CONFIG, Type.PASSWORD, SCHEMA_REGISTRY_USER_INFO_DEFAULT,
                 Importance.MEDIUM, SCHEMA_REGISTRY_USER_INFO_DOC)
         .define(USER_INFO_CONFIG, Type.PASSWORD, USER_INFO_DEFAULT,

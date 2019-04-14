@@ -113,6 +113,7 @@ public class RestService {
   private UrlList baseUrls;
   private SSLSocketFactory sslSocketFactory;
   private BasicAuthCredentialProvider basicAuthCredentialProvider;
+  private String maprSaslChallengeString;
 
   public RestService(UrlList baseUrls) {
     this.baseUrls = baseUrls;
@@ -161,6 +162,7 @@ public class RestService {
       setupSsl(connection);
       connection.setRequestMethod(method);
       setBasicAuthRequestHeader(connection);
+      setMaprSaslAuthRequestHeader(connection);
       // connection.getResponseCode() implicitly calls getInputStream, so always set to true.
       // On the other hand, leaving this out breaks nothing.
       connection.setDoInput(true);
@@ -538,8 +540,21 @@ public class RestService {
     }
   }
 
+  private void setMaprSaslAuthRequestHeader(HttpURLConnection connection) {
+    if (basicAuthCredentialProvider == null
+            &&
+            maprSaslChallengeString != null) {
+      connection.setRequestProperty("Authorization",
+              String.format("MAPR-Negotiate %s", maprSaslChallengeString));
+    }
+  }
+
   public void setBasicAuthCredentialProvider(
       BasicAuthCredentialProvider basicAuthCredentialProvider) {
     this.basicAuthCredentialProvider = basicAuthCredentialProvider;
+  }
+
+  public void setMaprSaslChallengeString(final String maprSaslChallengeString) {
+    this.maprSaslChallengeString = maprSaslChallengeString;
   }
 }

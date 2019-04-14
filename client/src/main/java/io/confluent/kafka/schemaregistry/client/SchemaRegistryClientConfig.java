@@ -23,4 +23,5 @@ public class SchemaRegistryClientConfig {
       "schema.registry.basic.auth.user.info";
   public static final String USER_INFO_CONFIG =
       "basic.auth.user.info";
+  public static final String MAPRSASL_AUTH_CONFIG = "maprsasl.auth";
 }
