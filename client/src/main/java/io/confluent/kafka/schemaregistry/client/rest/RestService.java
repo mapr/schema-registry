@@ -35,6 +35,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
@@ -114,6 +115,7 @@ public class RestService {
   private SSLSocketFactory sslSocketFactory;
   private BasicAuthCredentialProvider basicAuthCredentialProvider;
   private String maprSaslChallengeString;
+  private String authCookie;
 
   public RestService(UrlList baseUrls) {
     this.baseUrls = baseUrls;
@@ -162,7 +164,7 @@ public class RestService {
       setupSsl(connection);
       connection.setRequestMethod(method);
       setBasicAuthRequestHeader(connection);
-      setMaprSaslAuthRequestHeader(connection);
+      setMaprSaslAuthRequestHeaderOrCookie(connection);
       // connection.getResponseCode() implicitly calls getInputStream, so always set to true.
       // On the other hand, leaving this out breaks nothing.
       connection.setDoInput(true);
@@ -192,6 +194,7 @@ public class RestService {
 
       int responseCode = connection.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
+        extractAuthCookieFromResponse(connection);
         InputStream is = connection.getInputStream();
         T result = jsonDeserializer.readValue(is, responseFormat);
         is.close();
@@ -531,6 +534,11 @@ public class RestService {
   }
 
   private void setBasicAuthRequestHeader(HttpURLConnection connection) {
+    if (authCookie != null) {
+      connection.setRequestProperty("Cookie", authCookie);
+      return;
+    }
+
     String userInfo;
     if (basicAuthCredentialProvider != null
         && (userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL())) != null) {
@@ -540,7 +548,22 @@ public class RestService {
     }
   }
 
-  private void setMaprSaslAuthRequestHeader(HttpURLConnection connection) {
+  private void extractAuthCookieFromResponse(HttpURLConnection connection) {
+    final Optional<String> hadoopAuth =
+            Optional.ofNullable(connection.getHeaderField("Set-Cookie"));
+    hadoopAuth.ifPresent((value) -> {
+      if (value.startsWith("hadoop.auth")) {
+        authCookie = value;
+      }
+    });
+  }
+
+  private void setMaprSaslAuthRequestHeaderOrCookie(HttpURLConnection connection) {
+    if (authCookie != null) {
+      connection.setRequestProperty("Cookie", authCookie);
+      return;
+    }
+
     if (basicAuthCredentialProvider == null
             &&
             maprSaslChallengeString != null) {
