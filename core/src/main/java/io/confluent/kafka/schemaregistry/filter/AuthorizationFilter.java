@@ -25,12 +25,12 @@ import io.confluent.kafka.schemaregistry.filter.util.KafkaConsumerPool;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.exceptions.AuthorizationException;
 import io.confluent.kafka.schemaregistry.storage.KafkaProducerPool;
-import java.util.Map;
+
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
-import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import io.confluent.rest.impersonation.ImpersonationUtils;
@@ -39,6 +39,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaException;
+import org.glassfish.jersey.server.ContainerRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,8 +118,13 @@ public class AuthorizationFilter implements ContainerRequestFilter {
   }
 
   private String retrieveCookie(ContainerRequestContext requestContext) {
-    Map<String, Cookie> cookies = requestContext.getCookies();
-    return cookies.values().stream().map(Cookie::getValue).findAny().orElse(null);
+    List<String> cookies = ((ContainerRequest) requestContext).getRequestHeader("Cookie");
+    if (cookies != null) {
+      return cookies.stream().filter(cookie -> cookie.startsWith("hadoop.auth"))
+              .findFirst().orElse(null);
+    }
+
+    return null;
   }
 
   private Properties getProducerProperties() {
