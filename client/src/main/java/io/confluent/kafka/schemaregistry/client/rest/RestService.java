@@ -21,6 +21,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.mapr.security.client.ClientSecurity;
+import com.mapr.security.client.MapRClientSecurityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +116,7 @@ public class RestService {
   private UrlList baseUrls;
   private SSLSocketFactory sslSocketFactory;
   private BasicAuthCredentialProvider basicAuthCredentialProvider;
-  private String maprSaslChallengeString;
+  private boolean maprSaslAuth = false;
   private String authCookie;
 
   public RestService(UrlList baseUrls) {
@@ -127,6 +129,19 @@ public class RestService {
 
   public RestService(String baseUrlConfig) {
     this(parseBaseUrl(baseUrlConfig));
+  }
+
+  public static String readChallengeString() {
+    ClientSecurity cs = new ClientSecurity();
+    try {
+      return cs.generateChallenge();
+    } catch (MapRClientSecurityException e) {
+      throw new RuntimeException("Cannot read chalange string", e);
+    }
+  }
+
+  public void setMaprSaslAuth(Boolean maprSaslAuth) {
+    this.maprSaslAuth = maprSaslAuth != null && maprSaslAuth;
   }
 
   public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
@@ -163,8 +178,7 @@ public class RestService {
 
       setupSsl(connection);
       connection.setRequestMethod(method);
-      setBasicAuthRequestHeader(connection);
-      setMaprSaslAuthRequestHeaderOrCookie(connection);
+      setAuthRequestHeaderOrCookie(connection);
       // connection.getResponseCode() implicitly calls getInputStream, so always set to true.
       // On the other hand, leaving this out breaks nothing.
       connection.setDoInput(true);
@@ -533,21 +547,6 @@ public class RestService {
     return baseUrls;
   }
 
-  private void setBasicAuthRequestHeader(HttpURLConnection connection) {
-    if (authCookie != null) {
-      connection.setRequestProperty("Cookie", authCookie);
-      return;
-    }
-
-    String userInfo;
-    if (basicAuthCredentialProvider != null
-        && (userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL())) != null) {
-      String authHeader = Base64.getEncoder().encodeToString(
-              userInfo.getBytes(StandardCharsets.UTF_8));
-      connection.setRequestProperty("Authorization", "Basic " + authHeader);
-    }
-  }
-
   private void extractAuthCookieFromResponse(HttpURLConnection connection) {
     final Optional<String> hadoopAuth =
             Optional.ofNullable(connection.getHeaderField("Set-Cookie"));
@@ -558,15 +557,26 @@ public class RestService {
     });
   }
 
-  private void setMaprSaslAuthRequestHeaderOrCookie(HttpURLConnection connection) {
+  private void setAuthRequestHeaderOrCookie(HttpURLConnection connection) {
+    // Cookie authentication header
     if (authCookie != null) {
       connection.setRequestProperty("Cookie", authCookie);
       return;
     }
 
-    if (basicAuthCredentialProvider == null
-            &&
-            maprSaslChallengeString != null) {
+    // Basic authentication header
+    String userInfo;
+    if (basicAuthCredentialProvider != null
+            && (userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL())) != null) {
+      String authHeader = Base64.getEncoder().encodeToString(
+              userInfo.getBytes(StandardCharsets.UTF_8));
+      connection.setRequestProperty("Authorization", "Basic " + authHeader);
+      return;
+    }
+
+    // MapR Sasl authentication header
+    if (maprSaslAuth) {
+      String maprSaslChallengeString = readChallengeString();
       connection.setRequestProperty("Authorization",
               String.format("MAPR-Negotiate %s", maprSaslChallengeString));
     }
@@ -577,7 +587,4 @@ public class RestService {
     this.basicAuthCredentialProvider = basicAuthCredentialProvider;
   }
 
-  public void setMaprSaslChallengeString(final String maprSaslChallengeString) {
-    this.maprSaslChallengeString = maprSaslChallengeString;
-  }
 }

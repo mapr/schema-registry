@@ -19,8 +19,6 @@ package io.confluent.kafka.schemaregistry.client;
 import java.util.Collections;
 import java.util.Objects;
 
-import com.mapr.security.client.ClientSecurity;
-import com.mapr.security.client.MapRClientSecurityException;
 import org.apache.avro.Schema;
 
 import java.io.IOException;
@@ -114,20 +112,8 @@ public class CachedSchemaRegistryClient implements SchemaRegistryClient {
         restService.setBasicAuthCredentialProvider(basicAuthCredentialProvider);
       } else {
         Object maprSasl = configs.get(SchemaRegistryClientConfig.MAPRSASL_AUTH_CONFIG);
-        if (maprSasl != null && (Boolean) maprSasl) {
-          final String challengeString = readChallengeString();
-          restService.setMaprSaslChallengeString(challengeString);
-        }
+        restService.setMaprSaslAuth((Boolean) maprSasl);
       }
-    }
-  }
-
-  public static String readChallengeString() {
-    ClientSecurity cs = new ClientSecurity();
-    try {
-      return cs.generateChallenge();
-    } catch (MapRClientSecurityException e) {
-      throw new RuntimeException("Cannot read chalange string", e);
     }
   }
 
