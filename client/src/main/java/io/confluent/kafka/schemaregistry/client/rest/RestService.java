@@ -251,11 +251,27 @@ public class RestService {
       String baseUrl = baseUrls.current();
       String requestUrl = buildRequestUrl(baseUrl, path);
       try {
-        return sendHttpRequest(requestUrl,
-                               method,
-                               requestBodyData,
-                               requestProperties,
-                               responseFormat);
+        try {
+          return sendHttpRequest(requestUrl,
+                  method,
+                  requestBodyData,
+                  requestProperties,
+                  responseFormat);
+        } catch (RestClientException e) {
+          // If we get 401 (UNATHORIZED) this means that authCookie is expired
+          // (or invalid beacuse of another reason).
+          // We will use credentials or challange string
+          // for authentication. authCookie will be updated.
+          if (e.getStatus() == 401 && authCookie != null) {
+            authCookie = null;
+            return sendHttpRequest(requestUrl,
+                    method,
+                    requestBodyData,
+                    requestProperties,
+                    responseFormat);
+          }
+          throw e;
+        }
       } catch (IOException e) {
         baseUrls.fail(baseUrl);
         if (i == n - 1) {
