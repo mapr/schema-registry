@@ -164,9 +164,6 @@ public class SchemaRegistryConfig extends RestConfig {
       "schema.registry.inter.instance.protocol";
   public static final String INTER_INSTANCE_PROTOCOL_CONFIG =
             "inter.instance.protocol";
-  public static final String SCHEMAREGISTRY_IMPERSONATION =
-      "schema.registry.impersonation.enable";
-  public static final boolean SCHEMAREGISTRY_IMPERSONATION_DEFAULT = false;
 
   protected static final String SCHEMAREGISTRY_GROUP_ID_DOC =
       "Use this setting to override the group.id for the Kafka group used when Kafka is used for "
@@ -504,10 +501,7 @@ public class SchemaRegistryConfig extends RestConfig {
         .define(SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, "",
                 ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
         .define(INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, HTTP,
-                ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
-        .define(SCHEMAREGISTRY_IMPERSONATION, ConfigDef.Type.BOOLEAN,
-            SCHEMAREGISTRY_IMPERSONATION_DEFAULT,
-            ConfigDef.Importance.MEDIUM, SCHEMAREGISTRY_IMPERSONATION_DOC);
+                ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC);
 
   }
 
