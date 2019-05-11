@@ -65,7 +65,7 @@
         <podam.version>6.0.2.RELEASE</podam.version>
         <checkstyle.suppressions.location>checkstyle/suppressions.xml</checkstyle.suppressions.location>
         <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
-        <mapr.streams.version>6.1.0-mapr-SNAPSHOT</mapr.streams.version>
+        <mapr.streams.version>6.2.0-mapr-SNAPSHOT</mapr.streams.version>
     </properties>
 
     <repositories>
