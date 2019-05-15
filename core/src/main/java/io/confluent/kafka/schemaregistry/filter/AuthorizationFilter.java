@@ -20,6 +20,7 @@ import static java.lang.String.format;
 import static javax.ws.rs.HttpMethod.DELETE;
 import static javax.ws.rs.HttpMethod.GET;
 import static javax.ws.rs.HttpMethod.POST;
+import static javax.ws.rs.HttpMethod.PUT;
 
 import io.confluent.kafka.schemaregistry.filter.util.KafkaConsumerPool;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
@@ -95,7 +96,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
       String method = requestContext.getMethod();
       if (method.equals(GET)) {
         checkReadingPermissions();
-      } else if (method.equals(POST) || method.equals(DELETE)) {
+      } else if (method.equals(POST) || method.equals(DELETE) || method.equals(PUT)) {
         checkWritingPermissions();
       }
     } catch (Exception e) {
