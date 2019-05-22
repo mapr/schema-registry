@@ -47,6 +47,13 @@ public class SchemaRegistryConfig extends RestConfig {
 
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryConfig.class);
 
+  /**
+   * MapR specific constants.
+   */
+  public static final String SCHEMAREGISTRY_SERVICES_COMMON_FOLDER = "/apps/schema-registry/";
+
+  private final String commandsStream;
+
   private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
   // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
   private static final String SCHEMAREGISTRY_LISTENERS_DEFAULT = "";
@@ -307,9 +314,6 @@ public class SchemaRegistryConfig extends RestConfig {
       + "`ssl.truststore.` configs are used while making the call. The "
       + "schema.registry.inter.instance.protocol name is deprecated; prefer using "
       + "inter.instance.protocol instead.";
-  protected static final String SCHEMAREGISTRY_IMPERSONATION_DOC =
-      "Set to true if you want impersonations for streams to be enabled, if false - all"
-          + " manipulation will be performed from admin of cluster user";
 
   private static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
   private static final String COMPATIBILITY_DEFAULT = "backward";
@@ -523,6 +527,11 @@ public class SchemaRegistryConfig extends RestConfig {
     if (compatibilityType == null) {
       throw new RestConfigException("Unknown Avro compatibility level: " + compatibilityTypeString);
     }
+    commandsStream = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + "schema-registry-internal-stream";
+  }
+
+  public String getCommandsStream() {
+    return commandsStream;
   }
 
   private static String getDefaultHost() {

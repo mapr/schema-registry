@@ -16,6 +16,7 @@
 package io.confluent.kafka.schemaregistry.rest;
 
 import io.confluent.kafka.schemaregistry.filter.AuthorizationFilter;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +51,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
 
   public SchemaRegistryRestApplication(SchemaRegistryConfig config) {
     super(config);
+    MaprFSUtils.createAppDirAndInternalStreamsIfNotExist(config);
   }
 
 

@@ -120,15 +120,6 @@ function getProperty() {
    echo $PROP_VALUE
 }
 
-createInternalStreamIfNotExists() {
-   CONF_FILE="$SR_CONF_DIR/schema-registry.properties"
-   INTERNAL_STREAM_NAME=$(getProperty $CONF_FILE "kafkastore.stream")
-   runuser -l $MAPR_USER -c "bash $SR_BIN/create-internal-stream-if-not-exists.sh $secureCluster $INTERNAL_STREAM_NAME $MAPR_USER"
-   if [ $? == 1 ]; then
-      exit 1
-   fi
-}
-
 copyFilesToTargetConfigDir() {
     mkdir -p $SR_CONF_DIR
     cp -n $SR_TEMPLATE_CONF_DIR/*.properties $SR_CONF_DIR
@@ -217,7 +208,6 @@ fi
 copyFilesToTargetConfigDir
 setZookeeperProperty
 changeSrPermission
-createInternalStreamIfNotExists
 setupWardenConfFile
 
 # remove state file and start files
