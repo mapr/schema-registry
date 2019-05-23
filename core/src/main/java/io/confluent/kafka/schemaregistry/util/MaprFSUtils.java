@@ -27,14 +27,16 @@ import java.io.IOException;
 
 public class MaprFSUtils {
 
-  public static void createAppDirAndInternalStreamsIfNotExist(SchemaRegistryConfig config) {
+  public static void createKafkaStoreInternalStreamIfNotExist(SchemaRegistryConfig config) {
     try {
       FileSystem fs = FileSystem.get(new Configuration());
       if (!Utils.maprFSpathExists(fs, SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER)) {
         throw new SchemaRegistryStreamsException(
                 SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + " doesn't exist");
       }
-      Utils.createStream(config.getCommandsStream());
+      final String kafkaStoreInternalStream = config.getKafkaStoreInternalStream();
+      Utils.createStream(kafkaStoreInternalStream);
+      Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
     } catch (IOException e) {
       throw new KafkaException(e);
     }

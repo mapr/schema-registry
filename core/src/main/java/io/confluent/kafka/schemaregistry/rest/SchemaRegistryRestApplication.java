@@ -51,7 +51,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
 
   public SchemaRegistryRestApplication(SchemaRegistryConfig config) {
     super(config);
-    MaprFSUtils.createAppDirAndInternalStreamsIfNotExist(config);
+    MaprFSUtils.createKafkaStoreInternalStreamIfNotExist(config);
   }
 
 

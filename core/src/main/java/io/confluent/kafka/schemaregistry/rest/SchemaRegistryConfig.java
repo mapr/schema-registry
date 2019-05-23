@@ -52,7 +52,7 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String SCHEMAREGISTRY_SERVICES_COMMON_FOLDER = "/apps/schema-registry/";
 
-  private final String commandsStream;
+  private final String kafkaStoreInternalStream;
 
   private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
   // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
@@ -527,11 +527,12 @@ public class SchemaRegistryConfig extends RestConfig {
     if (compatibilityType == null) {
       throw new RestConfigException("Unknown Avro compatibility level: " + compatibilityTypeString);
     }
-    commandsStream = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + "schema-registry-internal-stream";
+    kafkaStoreInternalStream = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER
+            + "schema-registry-internal-stream";
   }
 
-  public String getCommandsStream() {
-    return commandsStream;
+  public String getKafkaStoreInternalStream() {
+    return kafkaStoreInternalStream;
   }
 
   private static String getDefaultHost() {
