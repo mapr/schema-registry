@@ -131,34 +131,6 @@ copyFilesToTargetConfigDir() {
     fi
 }
 
-setZookeeperProperty() {
-    KAFKASTORE_CONNECTION_URL=""
-    while read -r line; do
-        if [[ $line == kafkastore.connection.url* ]]; then
-            KAFKASTORE_CONNECTION_URL=("${line#kafkastore.connection.url=}")
-            break
-        fi
-    done < $SR_CONF_DIR/schema-registry.properties
-
-    if [ $KAFKASTORE_CONNECTION_URL == "localhost:5181" ]; then
-
-        ZOOKEEPER_NODES=""
-        while read -r line; do
-            if [[ $line != Zookeepers ]]; then
-                ZOOKEEPER_NODES=("$line")
-                break
-            fi
-        done <<< "$(su - mapr -c 'maprcli node listzookeepers')"
-
-        if [ "$ZOOKEEPER_NODES" != "" ]; then
-            sed -i -e "s/localhost:5181/$ZOOKEEPER_NODES/g" $SR_CONF_DIR/schema-registry.properties
-        else
-            echo "ERROR: Zookeeper is not installed on this cluster. Schema Registry configuration process is interrupted."
-            exit 1
-        fi
-    fi
-}
-
 #
 # main
 #
@@ -206,7 +178,6 @@ if [ ! -f "$SR_CONF_DIR/.not_configured_yet" ]; then
     createRestartFile
 fi
 copyFilesToTargetConfigDir
-setZookeeperProperty
 changeSrPermission
 setupWardenConfFile
 

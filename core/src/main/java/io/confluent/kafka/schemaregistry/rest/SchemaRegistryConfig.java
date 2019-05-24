@@ -22,6 +22,7 @@ import static io.confluent.kafka.schemaregistry.client.rest.Versions.SCHEMA_REGI
 import io.confluent.common.config.ConfigDef;
 import io.confluent.common.config.ConfigException;
 import io.confluent.kafka.schemaregistry.avro.AvroCompatibilityLevel;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import io.confluent.rest.RestConfig;
 import io.confluent.rest.RestConfigException;
 import java.net.InetAddress;
@@ -360,7 +361,7 @@ public class SchemaRegistryConfig extends RestConfig {
             ConfigDef.Importance.HIGH,
             RESPONSE_MEDIATYPE_DEFAULT_CONFIG_DOC
         )
-        .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, "",
+        .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, MaprFSUtils.getZKQuorum(),
             ConfigDef.Importance.HIGH, KAFKASTORE_CONNECTION_URL_DOC
         )
         .define(KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, ConfigDef.Type.LIST, "",

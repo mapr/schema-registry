@@ -21,4 +21,8 @@ public class SchemaRegistryStreamsException extends RuntimeException {
   public SchemaRegistryStreamsException(final String message) {
     super(message);
   }
+
+  public SchemaRegistryStreamsException(final String message, final Throwable throwable) {
+    super(message, throwable);
+  }
 }

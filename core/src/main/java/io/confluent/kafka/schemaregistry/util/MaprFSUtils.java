@@ -16,6 +16,7 @@
 
 package io.confluent.kafka.schemaregistry.util;
 
+import com.mapr.fs.MapRFileSystem;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryStreamsException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,18 @@ public class MaprFSUtils {
       final String kafkaStoreInternalStream = config.getKafkaStoreInternalStream();
       Utils.createStream(kafkaStoreInternalStream);
       Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
+    } catch (IOException e) {
+      throw new KafkaException(e);
+    }
+  }
+
+  public static String getZKQuorum() {
+    try {
+      MapRFileSystem mfs = (MapRFileSystem) FileSystem.get(new Configuration());
+      return mfs.getZkConnectString();
+    } catch (RuntimeException e) {
+      throw new SchemaRegistryStreamsException(
+              "Zookeeper cannot be reached", e);
     } catch (IOException e) {
       throw new KafkaException(e);
     }
