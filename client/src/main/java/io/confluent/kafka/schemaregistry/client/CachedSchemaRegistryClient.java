@@ -111,8 +111,8 @@ public class CachedSchemaRegistryClient implements SchemaRegistryClient {
 
         restService.setBasicAuthCredentialProvider(basicAuthCredentialProvider);
       } else {
-        Object maprSasl = configs.get(SchemaRegistryClientConfig.MAPRSASL_AUTH_CONFIG);
-        restService.setMaprSaslAuth((Boolean) maprSasl);
+        String maprSasl = (String) configs.get(SchemaRegistryClientConfig.MAPRSASL_AUTH_CONFIG);
+        restService.setMaprSaslAuth(Boolean.valueOf(maprSasl));
       }
     }
   }
