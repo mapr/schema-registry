@@ -36,7 +36,7 @@ public class MaprFSUtils {
                 SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + " doesn't exist");
       }
       final String kafkaStoreInternalStream = config.getKafkaStoreInternalStream();
-      Utils.createStream(kafkaStoreInternalStream);
+      Utils.createStreamWithPublicPerms(kafkaStoreInternalStream);
       Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
     } catch (IOException e) {
       throw new KafkaException(e);
