@@ -323,6 +323,11 @@ public class SchemaRegistryConfig extends RestConfig {
   protected static final String ENABLE_AUTHORIZATION_DOC =
       "Set 'true' or 'false' to enable or disable authorization for Schema Registry service";
 
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_CONFIG = "schema.registry.service.id";
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_DEFAULT = "default_";
+
   private static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
   private static final String COMPATIBILITY_DEFAULT = "backward";
   private static final String METRICS_JMX_PREFIX_DEFAULT_OVERRIDE = "kafka.schema.registry";
@@ -514,8 +519,17 @@ public class SchemaRegistryConfig extends RestConfig {
                 ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
         .define(INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, HTTP,
                 ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
-        .define(ENABLE_AUTHORIZATION_CONFIG, ConfigDef.Type.BOOLEAN, ENABLE_AUTHORIZATION_DEFAULT,
-                ConfigDef.Importance.LOW, ENABLE_AUTHORIZATION_DOC);
+        .define(
+                SCHEMA_REGISTRY_SERVICE_ID_CONFIG,
+             ConfigDef.Type.STRING,
+                SCHEMA_REGISTRY_SERVICE_ID_DEFAULT,
+             ConfigDef.Importance.MEDIUM,
+            "Indicates the ID of the schema registry service.")
+        .define(ENABLE_AUTHORIZATION_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                ENABLE_AUTHORIZATION_DEFAULT,
+                ConfigDef.Importance.LOW,
+                ENABLE_AUTHORIZATION_DOC);
 
   }
 
