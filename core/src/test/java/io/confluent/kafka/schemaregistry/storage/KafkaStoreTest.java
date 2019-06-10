@@ -267,7 +267,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
     Properties topicProps = new Properties();
     topicProps.put(LogConfig.CleanupPolicyProp(), "delete");
 
-    AdminUtils.createTopic(zkUtils, SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC, 1, 1, topicProps, RackAwareMode.Enforced$.MODULE$);
 
     Store<String, String> inMemoryStore = new InMemoryCache<String, String>();
 
@@ -280,8 +279,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
     Properties topicProps = new Properties();
     topicProps.put(LogConfig.CleanupPolicyProp(), "compact");
 
-    AdminUtils.createTopic(zkUtils, SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC, 3, 1,
-                           topicProps, RackAwareMode.Enforced$.MODULE$);
 
     Store<String, String> inMemoryStore = new InMemoryCache<String, String>();
 
@@ -292,7 +289,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdDifferentSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG, zkConnect);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(
@@ -321,7 +317,6 @@ public class KafkaStoreTest extends ClusterTestHarness {
   public void testKafkaStoreMessageHandlerSameIdSameSchema() throws Exception {
     Properties props = new Properties();
     props.put(SchemaRegistryConfig.KAFKASTORE_CONNECTION_URL_CONFIG, zkConnect);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = new SchemaRegistryConfig(props);
     KafkaSchemaRegistry schemaRegistry = new KafkaSchemaRegistry(

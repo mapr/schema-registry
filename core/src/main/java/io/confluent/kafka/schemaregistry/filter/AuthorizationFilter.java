@@ -15,7 +15,6 @@
 package io.confluent.kafka.schemaregistry.filter;
 
 
-import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.KAFKASTORE_STREAM_CONFIG;
 import static java.lang.String.format;
 import static javax.ws.rs.HttpMethod.DELETE;
 import static javax.ws.rs.HttpMethod.GET;
@@ -56,7 +55,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
   private final String internalTopic;
 
   public AuthorizationFilter(SchemaRegistryConfig schemaRegistryConfig) {
-    this.internalTopic = format("%s:%s", schemaRegistryConfig.getString(KAFKASTORE_STREAM_CONFIG),
+    this.internalTopic = format("%s:%s", schemaRegistryConfig.getKafkaStoreStream(),
         INTERNAL_TOPIC);
     this.kafkaConsumerPool = new KafkaConsumerPool(getConsumerProperties(), internalTopic);
     this.kafkaProducerPool = new KafkaProducerPool(getProducerProperties());

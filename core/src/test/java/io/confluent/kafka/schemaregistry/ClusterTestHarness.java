@@ -52,8 +52,8 @@ import scala.collection.JavaConversions;
 public abstract class ClusterTestHarness {
 
   public static final int DEFAULT_NUM_BROKERS = 1;
-  public static final String KAFKASTORE_STREAM = SchemaRegistryConfig.DEFAULT_KAFKASTORE_STREAM;
-  public static final String KAFKASTORE_TOPIC = SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC;
+  public static final String KAFKASTORE_STREAM = "";
+  public static final String KAFKASTORE_TOPIC = "";
   protected static final Option<Properties> EMPTY_SASL_PROPERTIES = Option$.MODULE$.<Properties>empty();
 
   /**

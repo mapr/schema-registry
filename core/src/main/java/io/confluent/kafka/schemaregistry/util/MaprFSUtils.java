@@ -16,15 +16,18 @@
 
 package io.confluent.kafka.schemaregistry.util;
 
+import com.mapr.fs.MapRFileAce;
 import com.mapr.fs.MapRFileSystem;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryStreamsException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.streams.mapr.Utils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MaprFSUtils {
 
@@ -35,7 +38,37 @@ public class MaprFSUtils {
         throw new SchemaRegistryStreamsException(
                 SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + " doesn't exist");
       }
-      final String kafkaStoreInternalStream = config.getKafkaStoreInternalStream();
+      String currentUser = UserGroupInformation.getCurrentUser().getUserName();
+      String errorMessage =
+              String.format(
+                      "User: %s has no permissions to run Schema Registry service with ID: %s",
+                      currentUser,
+                      config.getString(SchemaRegistryConfig.SCHEMA_REGISTRY_SERVICE_ID_CONFIG));
+      if (!Utils.maprFSpathExists(fs, config.getKafkaStoreStreamFolder())) {
+        // Creation of application forler with appropriate aces
+        ArrayList<MapRFileAce> aceList = new ArrayList<MapRFileAce>();
+
+        MapRFileAce ace = new MapRFileAce(MapRFileAce.AccessType.READDIR);
+        ace.setBooleanExpression("u:" + currentUser);
+        aceList.add(ace);
+        ace = new MapRFileAce(MapRFileAce.AccessType.ADDCHILD);
+        ace.setBooleanExpression("u:" + currentUser);
+        aceList.add(ace);
+        ace = new MapRFileAce(MapRFileAce.AccessType.LOOKUPDIR);
+        ace.setBooleanExpression("u:" + currentUser);
+        aceList.add(ace);
+        ace = new MapRFileAce(MapRFileAce.AccessType.DELETECHILD);
+        ace.setBooleanExpression("u:" + currentUser);
+        aceList.add(ace);
+
+        Utils.maprFSpathCreate(fs, config.getKafkaStoreStreamFolder(),
+                aceList, currentUser, errorMessage);
+      } else {
+        Utils.validateDirectoryPerms(fs, config.getKafkaStoreStreamFolder(),
+                currentUser, errorMessage);
+      }
+
+      final String kafkaStoreInternalStream = config.getKafkaStoreStream();
       Utils.createStreamWithPublicPerms(kafkaStoreInternalStream);
       //Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
     } catch (IOException e) {

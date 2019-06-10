@@ -65,8 +65,6 @@ public class RestApp {
     if (bootstrapBrokers != null) {
       prop.setProperty(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     }
-    prop.put(SchemaRegistryConfig.KAFKASTORE_STREAM_CONFIG, kafkaTopic.split(":")[0]);
-    prop.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, kafkaTopic.split(":")[1]);
     prop.put(SchemaRegistryConfig.COMPATIBILITY_CONFIG, compatibilityType);
     prop.put(SchemaRegistryConfig.MASTER_ELIGIBILITY, masterEligibility);
   }

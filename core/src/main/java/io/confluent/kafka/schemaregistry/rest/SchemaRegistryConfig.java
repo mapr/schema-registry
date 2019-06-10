@@ -53,8 +53,6 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String SCHEMAREGISTRY_SERVICES_COMMON_FOLDER = "/apps/schema-registry/";
 
-  private final String kafkaStoreInternalStream;
-
   private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
   // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
   private static final String SCHEMAREGISTRY_LISTENERS_DEFAULT = "";
@@ -74,17 +72,6 @@ public class SchemaRegistryConfig extends RestConfig {
    */
   public static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG
       = "kafkastore.zk.session.timeout.ms";
-    /**
-     * <code>kafkastore.stream</code>
-     */
-  public static final String KAFKASTORE_STREAM_CONFIG = "kafkastore.stream";
-  public static final String DEFAULT_KAFKASTORE_STREAM =
-      "/apps/schema-registry/schema-registry-internal-stream";
-  /**
-   * <code>kafkastore.topic</code>
-   */
-  public static final String KAFKASTORE_TOPIC_CONFIG = "kafkastore.topic";
-  public static final String DEFAULT_KAFKASTORE_TOPIC = "_schemas";
   /**
    * <code>kafkastore.topic.replication.factor</code>
    */
@@ -218,8 +205,6 @@ public class SchemaRegistryConfig extends RestConfig {
       + "should have the same ZooKeeper namespace.";
   protected static final String KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC =
       "Zookeeper session timeout";
-  protected static final String KAFKASTORE_STREAM_DOC =
-      "Mapr stream for schema topic";
   protected static final String KAFKASTORE_TOPIC_DOC =
       "The durable single partition topic that acts"
       + "as the durable log for the data";
@@ -338,6 +323,10 @@ public class SchemaRegistryConfig extends RestConfig {
   public static final String HTTPS = "https";
   public static final String HTTP = "http";
 
+  private final String kafkaStoreStreamFolder;
+  private final String kafkaStoreStream;
+  private final String kafkaStoreTopic;
+
   private Properties originalProperties;
 
   private ZkUtils zkUtils;
@@ -389,12 +378,6 @@ public class SchemaRegistryConfig extends RestConfig {
         )
         .define(KAFKASTORE_ZK_SESSION_TIMEOUT_MS_CONFIG, ConfigDef.Type.INT, 30000, atLeast(0),
             ConfigDef.Importance.LOW, KAFKASTORE_ZK_SESSION_TIMEOUT_MS_DOC
-        )
-        .define(KAFKASTORE_STREAM_CONFIG, ConfigDef.Type.STRING, DEFAULT_KAFKASTORE_STREAM,
-            ConfigDef.Importance.HIGH, KAFKASTORE_STREAM_DOC
-        )
-        .define(KAFKASTORE_TOPIC_CONFIG, ConfigDef.Type.STRING, DEFAULT_KAFKASTORE_TOPIC,
-            ConfigDef.Importance.HIGH, KAFKASTORE_TOPIC_DOC
         )
         .define(KAFKASTORE_TOPIC_REPLICATION_FACTOR_CONFIG, ConfigDef.Type.INT,
             DEFAULT_KAFKASTORE_TOPIC_REPLICATION_FACTOR,
@@ -546,17 +529,27 @@ public class SchemaRegistryConfig extends RestConfig {
   public SchemaRegistryConfig(ConfigDef configDef, Properties props) throws RestConfigException {
     super(configDef, props);
     this.originalProperties = props;
-    String compatibilityTypeString = getString(SchemaRegistryConfig.COMPATIBILITY_CONFIG);
+    final String compatibilityTypeString = getString(SchemaRegistryConfig.COMPATIBILITY_CONFIG);
     compatibilityType = AvroCompatibilityLevel.forName(compatibilityTypeString);
     if (compatibilityType == null) {
       throw new RestConfigException("Unknown Avro compatibility level: " + compatibilityTypeString);
     }
-    kafkaStoreInternalStream = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER
-            + "schema-registry-internal-stream";
+    final String serviceId = getString(SCHEMA_REGISTRY_SERVICE_ID_CONFIG);
+    kafkaStoreStreamFolder = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + serviceId;
+    kafkaStoreStream = kafkaStoreStreamFolder + "/schema-registry-internal-stream";
+    kafkaStoreTopic = kafkaStoreStream + ":_schemas";
   }
 
-  public String getKafkaStoreInternalStream() {
-    return kafkaStoreInternalStream;
+  public String getKafkaStoreStream() {
+    return kafkaStoreStream;
+  }
+
+  public String getKafkaStoreStreamFolder() {
+    return kafkaStoreStreamFolder;
+  }
+
+  public String getKafkaStoreTopic() {
+    return kafkaStoreTopic;
   }
 
   private static String getDefaultHost() {
