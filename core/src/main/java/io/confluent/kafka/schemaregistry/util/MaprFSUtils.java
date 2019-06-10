@@ -37,7 +37,7 @@ public class MaprFSUtils {
       }
       final String kafkaStoreInternalStream = config.getKafkaStoreInternalStream();
       Utils.createStreamWithPublicPerms(kafkaStoreInternalStream);
-      Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
+      //Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
     } catch (IOException e) {
       throw new KafkaException(e);
     }
