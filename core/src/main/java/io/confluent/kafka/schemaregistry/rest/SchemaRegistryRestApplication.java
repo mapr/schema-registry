@@ -91,7 +91,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
       if (authenticationMethod.equals(SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH)) {
         config.register(new AuthorizationFilter(schemaRegistryConfig));
       } else {
-        log.error("Authorization is not allowed without authentication. Configure {}={}",
+        log.error("Error starting the schema registry: Authorization is not allowed without authentication. Configure {}={}",
                   SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG,
                   SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH);
         System.exit(1);
