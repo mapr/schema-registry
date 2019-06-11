@@ -321,7 +321,7 @@ public class SchemaRegistryConfig extends RestConfig {
       + "inter.instance.protocol instead.";
 
   protected static final String ENABLE_AUTHORIZATION_DOC =
-          "Set 'true' or 'false' to enable or disable authorization for HTTP connection";
+      "Set 'true' or 'false' to enable or disable authorization for Schema Registry service";
 
   private static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
   private static final String COMPATIBILITY_DEFAULT = "backward";

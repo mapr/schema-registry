@@ -86,10 +86,16 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new SubjectVersionsResource(schemaRegistry));
     config.register(new CompatibilityResource(schemaRegistry));
 
-    boolean enableAuthorization = schemaRegistryConfig.getBoolean(SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG);
-    String authenticationMethod = schemaRegistryConfig.getString(SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG);
-    if (enableAuthorization && authenticationMethod.equals(SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH)) {
-      config.register(new AuthorizationFilter(schemaRegistryConfig));
+    if (schemaRegistryConfig.getBoolean(SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG)) {
+      String authenticationMethod = schemaRegistryConfig.getString(SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG);
+      if (authenticationMethod.equals(SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH)) {
+        config.register(new AuthorizationFilter(schemaRegistryConfig));
+      } else {
+        log.error("Authorization is not allowed without authentication. Configure {}={}",
+                  SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG,
+                  SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH);
+        System.exit(1);
+      }
     }
 
     if (schemaRegistryResourceExtensions != null) {
