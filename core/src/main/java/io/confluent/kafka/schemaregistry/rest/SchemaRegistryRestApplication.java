@@ -39,6 +39,10 @@ import io.confluent.kafka.schemaregistry.storage.serialization.SchemaRegistrySer
 import io.confluent.rest.Application;
 import io.confluent.rest.RestConfigException;
 
+import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG;
+import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH;
+import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG;
+
 public class SchemaRegistryRestApplication extends Application<SchemaRegistryConfig> {
 
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryRestApplication.class);
@@ -86,14 +90,14 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new SubjectVersionsResource(schemaRegistry));
     config.register(new CompatibilityResource(schemaRegistry));
 
-    if (schemaRegistryConfig.getBoolean(SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG)) {
-      String authenticationMethod = schemaRegistryConfig.getString(SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG);
-      if (authenticationMethod.equals(SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH)) {
+    if (schemaRegistryConfig.getBoolean(ENABLE_AUTHORIZATION_CONFIG)) {
+      String authentication = schemaRegistryConfig.getString(AUTHENTICATION_METHOD_CONFIG);
+      if (authentication.equals(AUTHENTICATION_METHOD_MULTIAUTH)) {
         config.register(new AuthorizationFilter(schemaRegistryConfig));
       } else {
-        log.error("Error starting the schema registry: Authorization is not allowed without authentication. Configure {}={}",
-                  SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG,
-                  SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH);
+        log.error("Error starting the schema registry: "
+                      + "Authorization is not allowed without authentication. Configure {}={}",
+                  AUTHENTICATION_METHOD_CONFIG, AUTHENTICATION_METHOD_MULTIAUTH);
         System.exit(1);
       }
     }
