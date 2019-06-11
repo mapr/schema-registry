@@ -172,6 +172,10 @@ public class SchemaRegistryConfig extends RestConfig {
       "schema.registry.inter.instance.protocol";
   public static final String INTER_INSTANCE_PROTOCOL_CONFIG =
             "inter.instance.protocol";
+  public static final String ENABLE_AUTHORIZATION_CONFIG =
+            "authorization.enable";
+  public static final boolean ENABLE_AUTHORIZATION_DEFAULT =
+            false;
 
   protected static final String SCHEMAREGISTRY_GROUP_ID_DOC =
       "Use this setting to override the group.id for the Kafka group used when Kafka is used for "
@@ -315,6 +319,9 @@ public class SchemaRegistryConfig extends RestConfig {
       + "`ssl.truststore.` configs are used while making the call. The "
       + "schema.registry.inter.instance.protocol name is deprecated; prefer using "
       + "inter.instance.protocol instead.";
+
+  protected static final String ENABLE_AUTHORIZATION_DOC =
+          "Set 'true' or 'false' to enable or disable authorization for HTTP connection";
 
   private static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
   private static final String COMPATIBILITY_DEFAULT = "backward";
@@ -506,7 +513,9 @@ public class SchemaRegistryConfig extends RestConfig {
         .define(SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, "",
                 ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
         .define(INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, HTTP,
-                ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC);
+                ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
+        .define(ENABLE_AUTHORIZATION_CONFIG, ConfigDef.Type.BOOLEAN, ENABLE_AUTHORIZATION_DEFAULT,
+                ConfigDef.Importance.LOW, ENABLE_AUTHORIZATION_DOC);
 
   }
 
