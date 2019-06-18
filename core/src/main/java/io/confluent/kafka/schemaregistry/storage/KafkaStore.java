@@ -215,7 +215,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     } catch (ExecutionException e) {
       if (e.getCause() instanceof TopicExistsException) {
         // If topic already exists, ensure that it is configured correctly.
-        verifySchemaTopic(admin);
+        //verifySchemaTopic(admin);
       } else {
         throw e;
       }
