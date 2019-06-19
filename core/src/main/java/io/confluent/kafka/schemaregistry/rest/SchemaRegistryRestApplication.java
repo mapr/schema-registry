@@ -39,9 +39,8 @@ import io.confluent.kafka.schemaregistry.storage.serialization.SchemaRegistrySer
 import io.confluent.rest.Application;
 import io.confluent.rest.RestConfigException;
 
-import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.AUTHENTICATION_METHOD_CONFIG;
-import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.AUTHENTICATION_METHOD_MULTIAUTH;
 import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG;
+import static io.confluent.rest.RestConfig.ENABLE_AUTHENTICATION_CONFIG;
 
 public class SchemaRegistryRestApplication extends Application<SchemaRegistryConfig> {
 
@@ -91,13 +90,13 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new CompatibilityResource(schemaRegistry));
 
     if (schemaRegistryConfig.getBoolean(ENABLE_AUTHORIZATION_CONFIG)) {
-      String authentication = schemaRegistryConfig.getString(AUTHENTICATION_METHOD_CONFIG);
-      if (authentication.equals(AUTHENTICATION_METHOD_MULTIAUTH)) {
+      final boolean isAuthenticationEnabled = schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG);
+      if (isAuthenticationEnabled) {
         config.register(new AuthorizationFilter(schemaRegistryConfig));
       } else {
         log.error("Error starting the schema registry: "
-                      + "Authorization is not allowed without authentication. Configure {}={}",
-                  AUTHENTICATION_METHOD_CONFIG, AUTHENTICATION_METHOD_MULTIAUTH);
+                      + "Authorization is not allowed without authentication. Configure {}=true",
+                  ENABLE_AUTHENTICATION_CONFIG);
         System.exit(1);
       }
     }
