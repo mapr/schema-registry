@@ -90,8 +90,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
     config.register(new CompatibilityResource(schemaRegistry));
 
     if (schemaRegistryConfig.getBoolean(ENABLE_AUTHORIZATION_CONFIG)) {
-      final boolean isAuthenticationEnabled = schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG);
-      if (isAuthenticationEnabled) {
+      if (schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG)) {
         config.register(new AuthorizationFilter(schemaRegistryConfig));
       } else {
         log.error("Error starting the schema registry: "
