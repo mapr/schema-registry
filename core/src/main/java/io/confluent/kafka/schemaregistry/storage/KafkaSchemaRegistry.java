@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
+import org.I0Itec.zkclient.ZkClient;
 import org.apache.avro.reflect.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,6 +230,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, MasterAwareSchemaReg
         log.info("Joining schema registry with Zookeeper-based coordination");
         masterElector = new ZookeeperMasterElector(config, myIdentity, this);
       }
+      saveUrlInZk();
       masterElector.init();
     } catch (SchemaRegistryStoreException e) {
       throw new SchemaRegistryInitializationException(
@@ -236,6 +238,25 @@ public class KafkaSchemaRegistry implements SchemaRegistry, MasterAwareSchemaReg
     } catch (SchemaRegistryTimeoutException e) {
       throw new SchemaRegistryInitializationException(e);
     }
+  }
+
+  private void saveUrlInZk() throws SchemaRegistryException {
+    final ZkClient zkClient = config.zkUtils().zkClient();
+    if (!zkClient.exists(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR)) {
+      zkClient.createPersistent(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR);
+    }
+    final String path = String.format("%s/%s_%d",
+            SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR,
+            myIdentity.getHost(),
+            myIdentity.getPort());
+    if (zkClient.exists(path)) {
+      final String errMsg =
+              String.format("%s:%d Address already in use",
+                      myIdentity.getHost(),
+                      myIdentity.getPort());
+      throw new SchemaRegistryInitializationException(errMsg);
+    }
+    zkClient.createEphemeral(path, myIdentity.getUrl());
   }
 
   public boolean isMaster() {

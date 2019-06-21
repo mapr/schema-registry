@@ -55,6 +55,8 @@ public class SchemaRegistryConfig extends RestConfig {
 
   private static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
 
+  public static final String SCHEMAREGISTRY_ZK_URLS_DIR = "/sr_urls";
+
   private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
   // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
   private static final String SCHEMAREGISTRY_LISTENERS_DEFAULT = "";
