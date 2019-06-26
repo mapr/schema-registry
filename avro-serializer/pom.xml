@@ -32,6 +32,10 @@
             <groupId>io.confluent</groupId>
             <artifactId>common-config</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.mapr.streams</groupId>
+            <artifactId>mapr-streams</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
