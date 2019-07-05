@@ -216,22 +216,31 @@ public class RestService {
       } else if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         return null;
       } else {
-        InputStream es = connection.getErrorStream();
-        ErrorMessage errorMessage;
-        try {
-          errorMessage = jsonDeserializer.readValue(es, ErrorMessage.class);
-        } catch (JsonProcessingException e) {
-          errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, e.getMessage());
-        }
-        es.close();
-        throw new RestClientException(errorMessage.getMessage(), responseCode,
-                                      errorMessage.getErrorCode());
+        return handleBadResponse(connection);
       }
 
     } finally {
       if (connection != null) {
         connection.disconnect();
       }
+    }
+  }
+
+  private <T> T handleBadResponse(HttpURLConnection connection)
+      throws IOException, RestClientException {
+    int responseCode = connection.getResponseCode();
+    // Auth handlers do not return json hence throw human-readable messages
+    if (responseCode == 401 || responseCode == 403) {
+      throw new RestClientException(connection.getResponseMessage(),
+                                    responseCode, responseCode);
+    }
+
+    try (InputStream es = connection.getErrorStream()) {
+      ErrorMessage errorMessage = jsonDeserializer.readValue(es, ErrorMessage.class);
+      throw new RestClientException(errorMessage.getMessage(), responseCode,
+                                    errorMessage.getErrorCode());
+    } catch (JsonProcessingException e) {
+      throw new RestClientException(e.getMessage(), responseCode, JSON_PARSE_ERROR_CODE);
     }
   }
 
