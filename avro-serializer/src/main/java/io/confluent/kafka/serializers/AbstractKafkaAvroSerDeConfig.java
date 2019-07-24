@@ -16,6 +16,8 @@
 
 package io.confluent.kafka.serializers;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +26,7 @@ import io.confluent.common.config.ConfigDef;
 import io.confluent.common.config.ConfigDef.Importance;
 import io.confluent.common.config.ConfigDef.Type;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
+import io.confluent.kafka.schemaregistry.client.rest.utils.UrlUtils;
 import io.confluent.kafka.serializers.subject.TopicNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,7 +41,24 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
   public static final String
       SCHEMA_REGISTRY_URL_DOC =
       "Comma-separated list of URLs for schema registry instances that can be used to register "
-      + "or look up schemas.";
+      + "or look up schemas. If not specified then will be fetched from Zookeeper";
+  public static final String SCHEMA_REGISTRY_URL_STUB = "<fetched from Zookeeper>";
+
+  public static final String SCHEMA_REGISTRY_SERVICE_ID_CONFIG = "schema.registry.service.id";
+  public static final String SCHEMA_REGISTRY_SERVICE_ID_DEFAULT = "default_";
+  public static final String SCHEMA_REGISTRY_SERVICE_ID_DOC =
+      "Indicates the ID of the schema registry service.";
+  public static final String ZOOKEEPER_SET_ACL_CONFIG = "zookeeper.set.acl";
+  public static final boolean ZOOKEEPER_SET_ACL_DEFAULT = false;
+  public static final String ZOOKEEPER_SET_ACL_DOC =
+      "Whether or not to set an ACL in ZooKeeper when znodes are created "
+      + "and ZooKeeper SASL authentication is configured. IMPORTANT: "
+      + "if set to `true`, the SASL principal must be the same as the Kafka brokers.";
+
+  public static final String ZK_INIT_TIMEOUT_CONFIG = "zookeeper.init.timeout";
+  public static final int ZK_INIT_TIMEOUT_DEFAULT = 60000;
+  public static final String ZK_INIT_TIMEOUT_DOC =
+      "The timeout for initialization when creating connection to zookeeper.";
 
   public static final String MAX_SCHEMAS_PER_SUBJECT_CONFIG = "max.schemas.per.subject";
   public static final int MAX_SCHEMAS_PER_SUBJECT_DEFAULT = 1000;
@@ -91,8 +111,14 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
 
   public static ConfigDef baseConfigDef() {
     return new ConfigDef()
-        .define(SCHEMA_REGISTRY_URL_CONFIG, Type.LIST,
+        .define(SCHEMA_REGISTRY_URL_CONFIG, Type.LIST, SCHEMA_REGISTRY_URL_STUB,
                 Importance.HIGH, SCHEMA_REGISTRY_URL_DOC)
+        .define(SCHEMA_REGISTRY_SERVICE_ID_CONFIG, Type.STRING, SCHEMA_REGISTRY_SERVICE_ID_DEFAULT,
+                Importance.MEDIUM, SCHEMA_REGISTRY_SERVICE_ID_DOC)
+        .define(ZK_INIT_TIMEOUT_CONFIG, Type.INT, ZK_INIT_TIMEOUT_DEFAULT,
+                Importance.MEDIUM, ZK_INIT_TIMEOUT_DOC)
+        .define(ZOOKEEPER_SET_ACL_CONFIG, Type.BOOLEAN, ZOOKEEPER_SET_ACL_DEFAULT,
+                Importance.MEDIUM, ZOOKEEPER_SET_ACL_DOC)
         .define(MAX_SCHEMAS_PER_SUBJECT_CONFIG, Type.INT, MAX_SCHEMAS_PER_SUBJECT_DEFAULT,
                 Importance.LOW, MAX_SCHEMAS_PER_SUBJECT_DOC)
         .define(AUTO_REGISTER_SCHEMAS, Type.BOOLEAN, AUTO_REGISTER_SCHEMAS_DEFAULT,
@@ -111,8 +137,15 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
                 Importance.MEDIUM, VALUE_SUBJECT_NAME_STRATEGY_DOC);
   }
 
+  private List<String> schemaRegistryUrls;
+
   public AbstractKafkaAvroSerDeConfig(ConfigDef config, Map<?, ?> props) {
     super(config, props);
+    if (getList(SCHEMA_REGISTRY_URL_CONFIG).contains(SCHEMA_REGISTRY_URL_STUB)) {
+      this.schemaRegistryUrls = getSchemaRegistryUrlsFromZookeeper();
+    } else {
+      this.schemaRegistryUrls = getList(SCHEMA_REGISTRY_URL_CONFIG);
+    }
   }
 
   public int getMaxSchemasPerSubject() {
@@ -120,7 +153,25 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
   }
 
   public List<String> getSchemaRegistryUrls() {
-    return this.getList(SCHEMA_REGISTRY_URL_CONFIG);
+    return this.schemaRegistryUrls;
+  }
+
+  private List<String> getSchemaRegistryUrlsFromZookeeper() {
+    final String result;
+    try {
+      result = UrlUtils.extractSchemaRegistryUrlFromZk(
+          getString(SCHEMA_REGISTRY_SERVICE_ID_CONFIG),
+          getInt(ZK_INIT_TIMEOUT_CONFIG),
+          getBoolean(ZOOKEEPER_SET_ACL_CONFIG));
+    } catch (IOException e) {
+      throw new RuntimeException(
+          "Can't fetch " + SCHEMA_REGISTRY_URL_CONFIG + " from Zookeeper", e);
+    }
+    if (result.isEmpty()) {
+      throw new RuntimeException(
+          "Can't fetch " + SCHEMA_REGISTRY_URL_CONFIG + " from Zookeeper");
+    }
+    return Arrays.asList(result.split(","));
   }
 
   public boolean autoRegisterSchema() {
