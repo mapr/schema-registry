@@ -58,6 +58,11 @@
             <artifactId>jaxws-api</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.mapr.streams</groupId>
+            <artifactId>mapr-streams</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

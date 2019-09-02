@@ -151,6 +151,16 @@
             <artifactId>easymock</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-easymock</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- To prevent a UniqueResourceException due the same resource existing in both
              org.apache.directory.api/api-all and org.apache.directory.api/api-ldap-schema-data, api-ldap-schema-data
              needs to be excluded from all directory-related maven dependencies. -->
