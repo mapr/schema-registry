@@ -28,6 +28,7 @@ import org.apache.kafka.streams.mapr.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class MaprFSUtils {
 
@@ -79,7 +80,8 @@ public class MaprFSUtils {
   public static String getZKQuorum() {
     try {
       MapRFileSystem mfs = (MapRFileSystem) FileSystem.get(new Configuration());
-      return mfs.getZkConnectString();
+      return Optional.ofNullable(mfs.getZkConnectString())
+          .orElseThrow(() -> new IOException("Cannot receive Zookeeper URL from MapR-FS"));
     } catch (RuntimeException e) {
       throw new SchemaRegistryStreamsException(
               "Zookeeper cannot be reached", e);

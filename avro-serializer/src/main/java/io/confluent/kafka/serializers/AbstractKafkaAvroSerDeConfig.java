@@ -17,7 +17,6 @@
 package io.confluent.kafka.serializers;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -157,12 +156,11 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
   }
 
   private List<String> getSchemaRegistryUrlsFromZookeeper() {
-    final String result;
+    final List<String> result;
     try {
-      result = UrlUtils.extractSchemaRegistryUrlFromZk(
+      result = UrlUtils.extractSchemaRegistryUrlsFromZk(
           getString(SCHEMA_REGISTRY_SERVICE_ID_CONFIG),
-          getInt(ZK_INIT_TIMEOUT_CONFIG),
-          getBoolean(ZOOKEEPER_SET_ACL_CONFIG));
+          getInt(ZK_INIT_TIMEOUT_CONFIG));
     } catch (IOException e) {
       throw new RuntimeException(
           "Can't fetch " + SCHEMA_REGISTRY_URL_CONFIG + " from Zookeeper", e);
@@ -171,7 +169,7 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractConfig {
       throw new RuntimeException(
           "Can't fetch " + SCHEMA_REGISTRY_URL_CONFIG + " from Zookeeper");
     }
-    return Arrays.asList(result.split(","));
+    return result;
   }
 
   public boolean autoRegisterSchema() {

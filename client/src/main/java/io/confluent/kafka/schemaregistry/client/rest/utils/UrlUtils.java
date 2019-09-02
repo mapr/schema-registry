@@ -19,69 +19,64 @@ import com.mapr.fs.MapRFileSystem;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import kafka.utils.ZkUtils;
+
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.substringBefore;
 
 public class UrlUtils {
 
   private static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
   private static final String SCHEMAREGISTRY_ZK_URLS_DIR = "/sr_urls";
 
+  /**
+   * @param zkAcl is deprecated for read operations
+   */
+  @SuppressWarnings("unused")
   public static String extractSchemaRegistryUrlFromZk(String schemaRegistryServiceId,
-                                                      int zkSessionTimeoutMs,
+                                                      int zkTimeoutMs,
                                                       boolean zkAcl) throws IOException {
-    if (schemaRegistryServiceId == null
-            ||
-            schemaRegistryServiceId.isEmpty()) {
+    List<String> urls = extractSchemaRegistryUrlsFromZk(schemaRegistryServiceId, zkTimeoutMs);
+    return String.join(",", urls);
+  }
+
+  public static List<String> extractSchemaRegistryUrlsFromZk(String schemaRegistryServiceId,
+                                                             int zkTimeoutMs) throws IOException {
+    String zkUrl = getSchemaRegistryZkUrl(schemaRegistryServiceId);
+    return readSchemaRegistryUrlsFromZookeeper(zkUrl, zkTimeoutMs);
+  }
+
+  private static String getSchemaRegistryZkUrl(String schemaRegistryServiceId) throws IOException {
+    if (isEmpty(schemaRegistryServiceId)) {
       throw new IllegalArgumentException("schemaRegistryServiceId should not be empty");
     }
 
-    final String schemaRegistryZkNamespace =
-            SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + schemaRegistryServiceId;
+    String srZkNamespace = SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + schemaRegistryServiceId;
     String srClusterZkUrl = getZkUrl();
+    String zkConnForNamespaceCreation = substringBefore(srClusterZkUrl, "/");
+    return zkConnForNamespaceCreation + "/" + srZkNamespace;
+  }
 
-    int kafkaNamespaceIndex = srClusterZkUrl.indexOf("/");
-    String zkConnForNamespaceCreation = kafkaNamespaceIndex > 0
-            ? srClusterZkUrl.substring(0, kafkaNamespaceIndex)
-            : srClusterZkUrl;
-
-    final String schemaRegistryNamespace = "/" + schemaRegistryZkNamespace;
-    final String schemaRegistryZkUrl = zkConnForNamespaceCreation + schemaRegistryNamespace;
-
-    ZkUtils zkUtils = ZkUtils.apply(
-            schemaRegistryZkUrl,
-            zkSessionTimeoutMs,
-            zkSessionTimeoutMs,
-            zkAcl
-    );
-
-
-    if (!zkUtils.pathExists(SCHEMAREGISTRY_ZK_URLS_DIR)) {
-      return "";
+  private static List<String> readSchemaRegistryUrlsFromZookeeper(String zkUrl, int zkTimeout) {
+    ZkClient zkClient = new ZkClient(zkUrl, zkTimeout, zkTimeout);
+    try {
+      return zkClient.getChildren(SCHEMAREGISTRY_ZK_URLS_DIR)
+              .stream()
+              .map(child -> SCHEMAREGISTRY_ZK_URLS_DIR + "/" + child)
+              .map((fullPath) -> zkClient.readData(fullPath).toString())
+              .collect(Collectors.toList());
+    } finally {
+      zkClient.close();
     }
-    final ZkClient zkClient = zkUtils.zkClient();
-    List<String> children = zkClient.getChildren(SCHEMAREGISTRY_ZK_URLS_DIR);
-    if (children == null
-            || children.isEmpty()) {
-      return "";
-    }
-
-
-    final String res = children.stream()
-            .map((child) -> {
-              final String fullPath = SCHEMAREGISTRY_ZK_URLS_DIR
-                      + "/" + child;
-              return zkClient.readData(fullPath).toString();
-            })
-            .reduce("", (x, y) -> x + "," + y);
-    zkUtils.close();
-
-    return res.substring(1);
   }
 
   private static String getZkUrl() throws IOException {
     MapRFileSystem mfs = (MapRFileSystem) FileSystem.get(new Configuration());
-    return mfs.getZkConnectString();
+    return Optional.ofNullable(mfs.getZkConnectString())
+            .orElseThrow(() -> new IOException("Cannot receive Zookeeper URL from MapR-FS"));
   }
 }
