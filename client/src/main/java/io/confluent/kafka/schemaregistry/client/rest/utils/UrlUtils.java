@@ -16,6 +16,7 @@
 package io.confluent.kafka.schemaregistry.client.rest.utils;
 
 import com.mapr.fs.MapRFileSystem;
+import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,7 +63,7 @@ public class UrlUtils {
   }
 
   private static List<String> readSchemaRegistryUrlsFromZookeeper(String zkUrl, int zkTimeout) {
-    ZkClient zkClient = new ZkClient(zkUrl, zkTimeout, zkTimeout);
+    ZkClient zkClient = ZkUtils.createZkClient(zkUrl, zkTimeout, zkTimeout);
     try {
       return zkClient.getChildren(SCHEMAREGISTRY_ZK_URLS_DIR)
               .stream()
