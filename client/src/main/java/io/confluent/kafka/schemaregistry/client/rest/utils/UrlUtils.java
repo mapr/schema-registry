@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -65,6 +66,9 @@ public class UrlUtils {
   private static List<String> readSchemaRegistryUrlsFromZookeeper(String zkUrl, int zkTimeout) {
     ZkClient zkClient = ZkUtils.createZkClient(zkUrl, zkTimeout, zkTimeout);
     try {
+      if (!zkClient.exists(SCHEMAREGISTRY_ZK_URLS_DIR)) {
+        return new LinkedList<>();
+      }
       return zkClient.getChildren(SCHEMAREGISTRY_ZK_URLS_DIR)
               .stream()
               .map(child -> SCHEMAREGISTRY_ZK_URLS_DIR + "/" + child)
