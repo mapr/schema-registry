@@ -14,12 +14,14 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
+import java.util.function.Function;
+
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -32,23 +34,23 @@ public class KafkaProducerPool {
 
   private Properties properties;
 
+  @VisibleForTesting
+  private Function<Properties, KafkaProducer<byte[], byte[]>> producerFactory;
+
   public KafkaProducerPool(Properties properties) {
     this.properties = properties;
+    this.producerFactory = KafkaProducer::new;
   }
 
   public Future<RecordMetadata> send(ProducerRecord<byte[], byte[]> record) {
     try {
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
-      KafkaProducer<byte[], byte[]> producer = producers.get(user);
-
-      if (producer == null) {
-        producer = new KafkaProducer<>(properties);
-        producers.put(user, producer);
-      }
+      KafkaProducer<byte[], byte[]> producer = producers.computeIfAbsent(user,
+          info -> producerFactory.apply(properties));
 
       return producer.send(record);
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw Errors.serverLoginException(e);
     }
   }

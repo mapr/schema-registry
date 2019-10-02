@@ -55,10 +55,18 @@ public class AuthorizationFilter implements ContainerRequestFilter {
   private final String internalTopic;
 
   public AuthorizationFilter(SchemaRegistryConfig schemaRegistryConfig) {
-    this.internalTopic = format("%s:%s", schemaRegistryConfig.getKafkaStoreStream(),
-        INTERNAL_TOPIC);
+    this.internalTopic = buildInternalTopicName(schemaRegistryConfig);
     this.kafkaConsumerPool = new KafkaConsumerPool(getConsumerProperties(), internalTopic);
     this.kafkaProducerPool = new KafkaProducerPool(getProducerProperties());
+    this.initializeInternalTopicWithDummyRecord();
+  }
+
+  AuthorizationFilter(SchemaRegistryConfig schemaRegistryConfig,
+                      KafkaConsumerPool kafkaConsumerPool,
+                      KafkaProducerPool kafkaProducerPool) {
+    this.internalTopic = buildInternalTopicName(schemaRegistryConfig);
+    this.kafkaConsumerPool = kafkaConsumerPool;
+    this.kafkaProducerPool = kafkaProducerPool;
     this.initializeInternalTopicWithDummyRecord();
   }
 
@@ -127,7 +135,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     return null;
   }
 
-  private Properties getProducerProperties() {
+  private static Properties getProducerProperties() {
     Properties properties = new Properties();
     properties.put(ProducerConfig.ACKS_CONFIG, "-1");
     properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
@@ -139,7 +147,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     return properties;
   }
 
-  private Properties getConsumerProperties() {
+  private static Properties getConsumerProperties() {
     Properties properties = new Properties();
     properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
@@ -150,4 +158,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     return properties;
   }
 
+  private String buildInternalTopicName(SchemaRegistryConfig schemaRegistryConfig) {
+    return format("%s:%s", schemaRegistryConfig.getKafkaStoreStream(), INTERNAL_TOPIC);
+  }
 }

@@ -14,13 +14,15 @@
 
 package io.confluent.kafka.schemaregistry.filter.util;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -34,30 +36,35 @@ public class KafkaConsumerPool {
       new ConcurrentHashMap<>();
 
   private final Properties properties;
-  private final String stream;
+  private final String topic;
 
-  public KafkaConsumerPool(Properties properties, String stream) {
+  @VisibleForTesting
+  private Function<Properties, KafkaConsumer<byte[], byte[]>> consumerFactory = KafkaConsumer::new;
+
+  public KafkaConsumerPool(Properties properties, String topic) {
     this.properties = properties;
-    this.stream = stream;
+    this.topic = topic;
   }
 
   public ConsumerRecords<byte[], byte[]> poll() {
     try {
       UserGroupInformation user = UserGroupInformation.getCurrentUser();
       ThreadLocal<KafkaConsumer<byte[], byte[]>> threadLocal =
-          consumers.computeIfAbsent(user, info -> new ThreadLocal<>());
+          consumers.computeIfAbsent(user, info -> createConsumer(user));
 
-      KafkaConsumer<byte[], byte[]> kafkaConsumer = threadLocal.get();
-      if (Objects.isNull(kafkaConsumer)) {
-        kafkaConsumer = new KafkaConsumer<>(createPropsWithConsumerGroup(properties, user));
-        kafkaConsumer.assign(Collections.singletonList(new TopicPartition(stream, 0)));
-        threadLocal.set(kafkaConsumer);
-      }
-
-      return kafkaConsumer.poll(Duration.ofMillis(1000));
+      return threadLocal.get().poll(Duration.ofMillis(1000));
     } catch (Exception e) {
       throw Errors.serverLoginException(e);
     }
+  }
+
+  private ThreadLocal<KafkaConsumer<byte[], byte[]>> createConsumer(UserGroupInformation user) {
+    return ThreadLocal.withInitial(() -> {
+      final Properties props = createPropsWithConsumerGroup(properties, user);
+      final KafkaConsumer<byte[], byte[]> kafkaConsumer = consumerFactory.apply(props);
+      kafkaConsumer.assign(Collections.singletonList(new TopicPartition(topic, 0)));
+      return kafkaConsumer;
+    });
   }
 
   private Properties createPropsWithConsumerGroup(Properties consumerProps,
