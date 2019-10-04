@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
+import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
 import org.apache.kafka.clients.consumer.Consumer;
@@ -66,7 +67,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
   private final ReentrantLock offsetUpdateLock;
   private final Condition offsetReachedThreshold;
   private Consumer<byte[], byte[]> consumer;
-  private final KafkaProducerPool producerPool;
+  private final ByteProducerPool producerPool;
   private long offsetInSchemasTopic = -1L;
   // Noop key is only used to help reliably determine last offset; reader thread ignores 
   // messages with this key
@@ -80,7 +81,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
                                 StoreUpdateHandler<K, V> storeUpdateHandler,
                                 Serializer<K, V> serializer,
                                 Store<K, V> localStore,
-                                KafkaProducerPool producerPool,
+                                ByteProducerPool producerPool,
                                 K noopKey,
                                 SchemaRegistryConfig config) {
     super("kafka-store-reader-thread-" + topic, false);  // this thread is not interruptible

@@ -15,7 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
-import io.confluent.kafka.schemaregistry.filter.AuthorizationFilter;
+import io.confluent.kafka.schemaregistry.filter.AuthorizationFilterProvider;
 import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +92,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
 
     if (schemaRegistryConfig.getBoolean(ENABLE_AUTHORIZATION_CONFIG)) {
       if (schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG)) {
-        config.register(new AuthorizationFilter(schemaRegistryConfig));
+        config.register(AuthorizationFilterProvider.configure(schemaRegistryConfig));
       } else {
         log.error("Error starting the schema registry: "
                       + "Authorization is not allowed without authentication. Configure {}=true",

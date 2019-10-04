@@ -1,54 +1,66 @@
-package io.confluent.kafka.schemaregistry.storage;
+package io.confluent.kafka.schemaregistry.util;
 
+import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
 import io.confluent.kafka.schemaregistry.utils.UserGroupInformationMockPolicy;
 import io.confluent.rest.exceptions.RestServerErrorException;
 import io.confluent.rest.impersonation.Errors;
-import junitparams.JUnitParamsRunner;
+import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.streams.KafkaClientSupplier;
 import org.easymock.EasyMockSupport;
-import org.easymock.Mock;
-import org.easymock.TestSubject;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.MockPolicy;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
-import java.util.Properties;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 
 import static org.apache.hadoop.security.UserGroupInformation.createRemoteUser;
 import static org.apache.hadoop.security.UserGroupInformation.getCurrentUser;
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 @RunWith(PowerMockRunner.class)
 @MockPolicy(UserGroupInformationMockPolicy.class)
-@PowerMockRunnerDelegate(JUnitParamsRunner.class)
-public class KafkaProducerPoolTest extends EasyMockSupport {
+public class ByteProducerPoolTest extends EasyMockSupport {
   private static final byte[] ANY_BYTES = "text".getBytes();
   private static final ProducerRecord<byte[], byte[]> ANY_RECORD = new ProducerRecord<>("topic", ANY_BYTES);
-  private Properties producerConfig = new Properties();
+  private Map<String, Object> producerConfig = new HashMap<>();
 
-  @TestSubject
-  private KafkaProducerPool producerPool = new KafkaProducerPool(producerConfig);
+  private KafkaClientSupplier clientSupplier;
 
-  @Mock
-  private Function<Properties, KafkaProducer<byte[], byte[]>> producerFactory;
+  private ByteProducerPool producerPool;
+
+  private IdMappingServiceProvider idMapper;
+
+  @Before
+  public void setUp() {
+    this.clientSupplier = mock(KafkaClientSupplier.class);
+    this.idMapper = mock(IdMappingServiceProvider.class);
+    this.producerPool = new ByteProducerPool(producerConfig, clientSupplier, idMapper);
+  }
 
   @Test
   public void sendsRecordByCreatedProducer() throws IOException {
     final CompletableFuture<RecordMetadata> expectedFuture = new CompletableFuture<>();
 
-    KafkaProducer<byte[], byte[]> producer = mockProducerFor(getCurrentUser());
+    UserGroupInformation currentUser = getCurrentUser();
+    expect(idMapper.getUid(currentUser.getUserName())).andReturn(1000);
+    KafkaProducer<byte[], byte[]> producer = mockProducerFor(currentUser);
     expect(producer.send(ANY_RECORD)).andReturn(expectedFuture);
     replayAll();
 
@@ -59,13 +71,15 @@ public class KafkaProducerPoolTest extends EasyMockSupport {
   }
 
   @Test
-  public void cachesProducerByUser() {
+  public void cachesProducerByUser() throws IOException {
     final CompletableFuture<RecordMetadata> expectedForU1C1 = new CompletableFuture<>();
     final CompletableFuture<RecordMetadata> expectedForU1C2 = new CompletableFuture<>();
     final CompletableFuture<RecordMetadata> expectedForU2C1 = new CompletableFuture<>();
 
     final UserGroupInformation u1 = createRemoteUser("U1");
+    expect(idMapper.getUid(u1.getUserName())).andReturn(1001).times(2);
     final UserGroupInformation u2 = createRemoteUser("U2");
+    expect(idMapper.getUid(u2.getUserName())).andReturn(1002);
     KafkaProducer<byte[], byte[]> producerForU1 = mockProducerFor(u1);
     KafkaProducer<byte[], byte[]> producerForU2 = mockProducerFor(u2);
 
@@ -84,7 +98,7 @@ public class KafkaProducerPoolTest extends EasyMockSupport {
   @SuppressWarnings("unchecked")
   private KafkaProducer<byte[], byte[]> mockProducerFor(UserGroupInformation user) {
     KafkaProducer<byte[], byte[]> producer = mock(KafkaProducer.class);
-    expect(producerFactory.apply(producerConfig))
+    expect(clientSupplier.getProducer(producerConfig))
             .andAnswer(() -> {
               assertThat("Should be created by another user", getCurrentUser(), is(user));
               return producer;
@@ -96,7 +110,9 @@ public class KafkaProducerPoolTest extends EasyMockSupport {
   @Test
   public void throwsServerLoginExceptionOnFailure() throws IOException {
     RuntimeException cause = new RuntimeException("Somehow cannot create producer");
-    final KafkaProducer<byte[], byte[]> producer = mockProducerFor(getCurrentUser());
+    UserGroupInformation currentUser = getCurrentUser();
+    expect(idMapper.getUid(currentUser.getUserName())).andReturn(1000);
+    final KafkaProducer<byte[], byte[]> producer = mockProducerFor(currentUser);
     expect(producer.send(anyObject())).andThrow(cause);
     replayAll();
 
@@ -116,7 +132,9 @@ public class KafkaProducerPoolTest extends EasyMockSupport {
   public void closesCachedProducer() throws IOException {
     final CompletableFuture<RecordMetadata> expectedFuture = new CompletableFuture<>();
 
-    KafkaProducer<byte[], byte[]> producer = mockProducerFor(getCurrentUser());
+    UserGroupInformation currentUser = getCurrentUser();
+    expect(idMapper.getUid(currentUser.getUserName())).andReturn(1000);
+    KafkaProducer<byte[], byte[]> producer = mockProducerFor(currentUser);
     expect(producer.send(ANY_RECORD)).andReturn(expectedFuture);
     producer.close();
     expectLastCall().once();

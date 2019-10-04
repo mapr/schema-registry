@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
+import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
+import io.confluent.kafka.schemaregistry.util.UnixUserIdUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.Config;
@@ -67,7 +69,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
   private final int initTimeout;
   private final int timeout;
   private final String bootstrapBrokers;
-  private KafkaProducerPool producerPool;
+  private ByteProducerPool producerPool;
   private KafkaStoreReaderThread<K, V> kafkaTopicReader;
   // Noop key is only used to help reliably determine last offset; reader thread ignores
   // messages with this key
@@ -122,7 +124,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
               org.apache.kafka.common.serialization.ByteArraySerializer.class);
     props.put(ProducerConfig.RETRIES_CONFIG, 0); // Producer should not retry
 
-    producerPool = new KafkaProducerPool(props);
+    producerPool = UnixUserIdUtils.configureProducerPool(props);
 
     // start the background thread that subscribes to the Kafka topic and applies updates.
     // the thread must be created after the schema topic has been created.
