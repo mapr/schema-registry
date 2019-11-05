@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +67,7 @@ public class ConfigResource {
 
   @Path("/{subject: .+}")
   @PUT
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateSubjectLevelConfig(
       @PathParam("subject") String subject,
       @Context HttpHeaders headers,
@@ -116,6 +119,7 @@ public class ConfigResource {
 
   @Path("/{subject: .+}")
   @GET
+  @RequirePermission(Permission.READ)
   public Config getSubjectLevelConfig(@PathParam("subject") String subject,
                                       @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                       @HeaderParam(HttpHeaders.COOKIE) String cookie) {
@@ -140,6 +144,7 @@ public class ConfigResource {
   }
 
   @PUT
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateTopLevelConfig(
           @Context HttpHeaders headers,
           @NotNull ConfigUpdateRequest request,
@@ -172,6 +177,7 @@ public class ConfigResource {
   }
 
   @GET
+  @RequirePermission(Permission.READ)
   public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                   @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(

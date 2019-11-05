@@ -7,8 +7,6 @@ import io.confluent.kafka.schemaregistry.util.ByteConsumerPool;
 import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
 import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import io.confluent.kafka.schemaregistry.utils.UserGroupInformationMockPolicy;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -26,15 +24,14 @@ import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.MockPolicy;
 import org.powermock.core.classloader.annotations.PrepareOnlyThisForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.powermock.modules.junit4.PowerMockRunnerDelegate;
 
-import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
+import static io.confluent.kafka.schemaregistry.filter.AuthorizationTestResource.*;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.easymock.EasyMock.*;
@@ -44,7 +41,6 @@ import static org.junit.Assert.fail;
 
 @RunWith(PowerMockRunner.class)
 @MockPolicy(UserGroupInformationMockPolicy.class)
-@PowerMockRunnerDelegate(JUnitParamsRunner.class)
 @PrepareOnlyThisForTest(MaprFSUtils.class)
 public class AuthorizationFilterTest extends EasyMockSupport {
 
@@ -109,7 +105,7 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   @Test
   public void authenticatedRequestSucceeds() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(HttpMethod.GET);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.READ);
     expectUserPollsRecordsToAuxiliaryTopicSucceeds(IMPERSONATED_USER);
     replayAll();
 
@@ -119,12 +115,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   @Test
-  @Parameters(value = {
-          HttpMethod.POST, HttpMethod.DELETE, HttpMethod.PUT
-  })
-  public void writeCommandIsForbiddenWithoutWritePermission(final String method) {
+  public void writeCommandIsForbiddenWithoutWritePermission() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.MODIFY);
     final Capture<Response> captured = Capture.newInstance();
     expectAbortWith(request, capture(captured));
     expectUserSendsRecordToAuxiliaryTopicFails(IMPERSONATED_USER);
@@ -139,12 +132,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
 
 
   @Test
-  @Parameters(value = {
-          HttpMethod.POST, HttpMethod.DELETE, HttpMethod.PUT
-  })
-  public void writeCommandSucceedsWithWritePermission(final String method) {
+  public void writeCommandSucceedsWithWritePermission() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.MODIFY);
     expectUserSendsRecordToAuxiliaryTopicSucceeds(IMPERSONATED_USER);
     replayAll();
 
@@ -154,12 +144,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   @Test
-  @Parameters(value = {
-          HttpMethod.GET
-  })
-  public void readCommandIsForbiddenWithoutReadPermission(String method) {
+  public void readCommandIsForbiddenWithoutReadPermission() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.READ);
     final Capture<Response> captured = Capture.newInstance();
     expectAbortWith(request, capture(captured));
     expectUserPollsRecordsToAuxiliaryTopicFails(IMPERSONATED_USER);
@@ -173,12 +160,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   @Test
-  @Parameters(value = {
-          HttpMethod.GET
-  })
-  public void readCommandSucceedsWithReadPermission(String method) {
+  public void readCommandSucceedsWithReadPermission() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.READ);
     expectUserPollsRecordsToAuxiliaryTopicSucceeds(IMPERSONATED_USER);
     replayAll();
 
@@ -188,12 +172,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   @Test
-  @Parameters(value = {
-          HttpMethod.GET
-  })
-  public void readCommandIsForbiddenOnEmptyRecordsWithReadPermission(String method) {
+  public void readCommandIsForbiddenOnEmptyRecordsWithReadPermission() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.READ);
     final Capture<Response> captured = Capture.newInstance();
     expectAbortWith(request, capture(captured));
     expect(byteConsumerPool.poll(AUXILIARY_TOPIC)).andAnswer(() -> {
@@ -210,12 +191,9 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   @Test
-  @Parameters(value = {
-          HttpMethod.PATCH, HttpMethod.HEAD, HttpMethod.OPTIONS,
-  })
-  public void otherCommandsSucceedWithoutAnyPermissions(String method) {
+  public void otherCommandsSucceedWithoutAnyPermissions() {
     final ContainerRequest request = createAuthenticatedRequest();
-    expect(request.getMethod()).andReturn(method);
+    authorizationFilter.resourceInfo = resourceInfo(Permission.NONE);
     replayAll();
 
     authorizationFilter.filter(request);

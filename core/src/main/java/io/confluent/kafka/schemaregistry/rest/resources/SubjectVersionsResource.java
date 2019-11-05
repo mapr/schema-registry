@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +79,7 @@ public class SubjectVersionsResource {
   @GET
   @Path("/{version}")
   @PerformanceMetric("subjects.versions.get-schema")
+  @RequirePermission(Permission.READ)
   public Schema getSchema(@PathParam("subject") String subject,
                           @PathParam("version") String version,
                           @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
@@ -116,6 +119,7 @@ public class SubjectVersionsResource {
   @GET
   @Path("/{version}/schema")
   @PerformanceMetric("subjects.versions.get-schema.only")
+  @RequirePermission(Permission.READ)
   public String getSchemaOnly(@PathParam("subject") String subject,
                               @PathParam("version") String version,
                               @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
@@ -130,6 +134,7 @@ public class SubjectVersionsResource {
 
   @GET
   @PerformanceMetric("subjects.versions.list")
+  @RequirePermission(Permission.READ)
   public List<Integer> list(@PathParam("subject") String subject,
                             @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                             @HeaderParam(HttpHeaders.COOKIE) String cookie) {
@@ -172,6 +177,7 @@ public class SubjectVersionsResource {
 
   @POST
   @PerformanceMetric("subjects.versions.register")
+  @RequirePermission(Permission.MODIFY)
   public void register(final @Suspended AsyncResponse asyncResponse,
                        @Context HttpHeaders headers,
                        @PathParam("subject") String subjectName,
@@ -218,6 +224,7 @@ public class SubjectVersionsResource {
   @DELETE
   @Path("/{version}")
   @PerformanceMetric("subjects.versions.deleteSchemaVersion-schema")
+  @RequirePermission(Permission.MODIFY)
   public void deleteSchemaVersion(final @Suspended AsyncResponse asyncResponse,
                                   @Context HttpHeaders headers,
                                   @PathParam("subject") String subject,

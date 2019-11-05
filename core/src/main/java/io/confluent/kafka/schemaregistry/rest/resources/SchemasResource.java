@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +56,7 @@ public class SchemasResource {
   @GET
   @Path("/ids/{id}")
   @PerformanceMetric("schemas.ids.get-schema")
+  @RequirePermission(Permission.READ)
   public SchemaString getSchema(@PathParam("id") Integer id,
                                 @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                                 @HeaderParam(HttpHeaders.COOKIE) String cookie) {

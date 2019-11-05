@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +70,7 @@ public class SubjectsResource {
   @POST
   @Path("/{subject: .+}")
   @PerformanceMetric("subjects.get-schema")
+  @RequirePermission(Permission.READ)
   public void lookUpSchemaUnderSubject(final @Suspended AsyncResponse asyncResponse,
                                        @PathParam("subject") String subject,
                                        @QueryParam("deleted") boolean
@@ -105,6 +108,7 @@ public class SubjectsResource {
   @GET
   @Valid
   @PerformanceMetric("subjects.list")
+  @RequirePermission(Permission.READ)
   public Set<String> list(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
                           @HeaderParam(HttpHeaders.COOKIE) String cookie) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(this::list, auth, cookie);
@@ -123,6 +127,7 @@ public class SubjectsResource {
   @DELETE
   @Path("/{subject: .+}")
   @PerformanceMetric("subjects.delete-subject")
+  @RequirePermission(Permission.MODIFY)
   public void deleteSubject(final @Suspended AsyncResponse asyncResponse,
                             @Context HttpHeaders headers,
                             @PathParam("subject") String subject,

@@ -15,6 +15,8 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +67,7 @@ public class CompatibilityResource {
   @POST
   @Path("/subjects/{subject: .+}/versions/{version}")
   @PerformanceMetric("compatibility.subjects.versions.verify")
+  @RequirePermission(Permission.READ)
   public void lookUpSchemaUnderSubject(final @Suspended AsyncResponse asyncResponse,
                                        final @HeaderParam("Content-Type") String contentType,
                                        final @HeaderParam("Accept") String accept,

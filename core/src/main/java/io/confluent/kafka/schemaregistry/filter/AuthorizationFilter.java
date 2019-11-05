@@ -26,20 +26,20 @@ import org.apache.kafka.common.KafkaException;
 
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ResourceInfo;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import java.lang.reflect.Method;
 import java.util.concurrent.ExecutionException;
-
-import static javax.ws.rs.HttpMethod.DELETE;
-import static javax.ws.rs.HttpMethod.GET;
-import static javax.ws.rs.HttpMethod.POST;
-import static javax.ws.rs.HttpMethod.PUT;
-
 
 public class AuthorizationFilter implements ContainerRequestFilter {
 
   private ByteConsumerPool consumerPool;
   private ByteProducerPool producerPool;
   private final String internalTopic;
+
+  @Context
+  protected ResourceInfo resourceInfo;
 
   public AuthorizationFilter(ByteConsumerPool consumerPool,
                              ByteProducerPool producerPool,
@@ -54,7 +54,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     try {
       String userName = MaprAuthenticationUtils.getUserNameFromRequestContext(requestContext);
       ImpersonationUtils.executor().runAs(userName, () -> {
-        checkPermissions(requestContext);
+        checkPermissions();
         return null;
       });
     } catch (Exception e) {
@@ -76,13 +76,20 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     }
   }
 
-  private void checkPermissions(ContainerRequestContext requestContext) {
+  private void checkPermissions() {
     try {
-      String method = requestContext.getMethod();
-      if (method.equals(GET)) {
-        checkReadingPermissions();
-      } else if (method.equals(POST) || method.equals(DELETE) || method.equals(PUT)) {
-        checkWritingPermissions();
+      Class<?> resourceClass = resourceInfo.getResourceClass();
+      Method resourceMethod = resourceInfo.getResourceMethod();
+      Permission permission = Permission.at(resourceClass, resourceMethod);
+      switch (permission) {
+        case READ:
+          checkReadingPermissions();
+          break;
+        case MODIFY:
+          checkWritingPermissions();
+          break;
+        default:
+          break;
       }
     } catch (Exception e) {
       throw new AuthorizationException(
