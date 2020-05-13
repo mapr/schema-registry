@@ -1,6 +1,5 @@
 package io.confluent.kafka.schemaregistry.util;
 
-import io.confluent.kafka.schemaregistry.util.ByteConsumerPool;
 import io.confluent.kafka.schemaregistry.utils.UserGroupInformationMockPolicy;
 import io.confluent.rest.exceptions.RestServerErrorException;
 import io.confluent.rest.impersonation.Errors;
@@ -10,7 +9,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.streams.KafkaClientSupplier;
 import org.easymock.EasyMockSupport;
 import org.easymock.IExpectationSetters;
 import org.junit.Before;

@@ -20,7 +20,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.streams.KafkaClientSupplier;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

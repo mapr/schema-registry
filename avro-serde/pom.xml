@@ -29,8 +29,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
-            <scope>provided</scope>
+            <artifactId>mapr-eco-tools</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>

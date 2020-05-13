@@ -20,66 +20,41 @@ import com.mapr.fs.MapRFileAce;
 import com.mapr.fs.MapRFileSystem;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryStreamsException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.streams.mapr.Utils;
+import org.apache.kafka.mapr.tools.KafkaMaprStreams;
+import org.apache.kafka.mapr.tools.KafkaMaprTools;
+import org.apache.kafka.mapr.tools.KafkaMaprfs;
+import org.apache.kafka.mapr.tools.MaprfsPermissions;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Optional;
 
 public class MaprFSUtils {
 
   public static void createKafkaStoreInternalStreamIfNotExist(SchemaRegistryConfig config) {
-    try {
-      FileSystem fs = FileSystem.get(new Configuration());
-      if (!Utils.maprFSpathExists(fs, SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER)) {
-        throw new SchemaRegistryStreamsException(
-                SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + " doesn't exist");
-      }
-      String currentUser = UserGroupInformation.getCurrentUser().getUserName();
-      String errorMessage =
-              String.format(
-                      "User: %s has no permissions to run Schema Registry service with ID: %s",
-                      currentUser,
-                      config.getString(SchemaRegistryConfig.SCHEMA_REGISTRY_SERVICE_ID_CONFIG));
-      if (!Utils.maprFSpathExists(fs, config.getKafkaStoreStreamFolder())) {
-        // Creation of application forler with appropriate aces
-        ArrayList<MapRFileAce> aceList = new ArrayList<MapRFileAce>();
+    KafkaMaprfs maprfs = KafkaMaprTools.tools().maprfs();
+    maprfs.requireExisting(SchemaRegistryConfig.SCHEMAREGISTRY_SERVICES_COMMON_FOLDER);
 
-        MapRFileAce ace = new MapRFileAce(MapRFileAce.AccessType.READDIR);
-        ace.setBooleanExpression("p");
-        aceList.add(ace);
-        ace = new MapRFileAce(MapRFileAce.AccessType.ADDCHILD);
-        ace.setBooleanExpression("u:" + currentUser);
-        aceList.add(ace);
-        ace = new MapRFileAce(MapRFileAce.AccessType.LOOKUPDIR);
-        ace.setBooleanExpression("p");
-        aceList.add(ace);
-        ace = new MapRFileAce(MapRFileAce.AccessType.DELETECHILD);
-        ace.setBooleanExpression("u:" + currentUser);
-        aceList.add(ace);
+    String internalFolder = config.getKafkaStoreStreamFolder();
+    if (!maprfs.exists(internalFolder)) {
+      maprfs.mkdirs(internalFolder);
+      maprfs.setPermissions(internalFolder, MaprfsPermissions.permissions()
+              .put(MapRFileAce.AccessType.READDIR, MaprfsPermissions.PUBLIC)
+              .put(MapRFileAce.AccessType.LOOKUPDIR, MaprfsPermissions.PUBLIC)
+              .put(MapRFileAce.AccessType.ADDCHILD, MaprfsPermissions.STARTUP_USER)
+              .put(MapRFileAce.AccessType.DELETECHILD, MaprfsPermissions.STARTUP_USER)
+              .put(MapRFileAce.AccessType.WRITEFILE, MaprfsPermissions.STARTUP_USER));
+    }
 
-        Utils.maprFSpathCreate(fs, config.getKafkaStoreStreamFolder(),
-                aceList, currentUser, errorMessage);
-      } else {
-        Utils.validateDirectoryPerms(fs, config.getKafkaStoreStreamFolder(),
-                currentUser, errorMessage);
-      }
-
-      final String kafkaStoreInternalStream = config.getKafkaStoreStream();
-      Utils.createStreamWithPublicPerms(kafkaStoreInternalStream);
-      Utils.enableLogCompactionForStreamIfNotEnabled(kafkaStoreInternalStream);
-    } catch (IOException e) {
-      throw new KafkaException(e);
+    try (KafkaMaprStreams maprStreams = KafkaMaprTools.tools().streams()) {
+      maprStreams.createStreamForAllUsers(config.getKafkaStoreStream());
+      maprStreams.ensureStreamLogCompactionIsEnabled(config.getKafkaStoreStream());
     }
   }
 
   public static String getZKQuorum() {
     try {
-      MapRFileSystem mfs = (MapRFileSystem) FileSystem.get(new Configuration());
+      MapRFileSystem mfs = KafkaMaprTools.tools().getMapRFileSystem();
       return Optional.ofNullable(mfs.getZkConnectString())
           .orElseThrow(() -> new IOException("Cannot receive Zookeeper URL from MapR-FS"));
     } catch (RuntimeException e) {

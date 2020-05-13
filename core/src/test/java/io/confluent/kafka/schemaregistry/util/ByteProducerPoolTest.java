@@ -1,6 +1,5 @@
 package io.confluent.kafka.schemaregistry.util;
 
-import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
 import io.confluent.kafka.schemaregistry.utils.UserGroupInformationMockPolicy;
 import io.confluent.rest.exceptions.RestServerErrorException;
 import io.confluent.rest.impersonation.Errors;
@@ -9,7 +8,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.streams.KafkaClientSupplier;
 import org.easymock.EasyMockSupport;
 import org.junit.Before;
 import org.junit.Test;

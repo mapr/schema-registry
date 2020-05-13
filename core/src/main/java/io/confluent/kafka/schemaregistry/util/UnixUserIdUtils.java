@@ -19,8 +19,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.IdMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedIdMapping;
 import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.streams.KafkaClientSupplier;
-import org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier;
 
 import java.io.IOException;
 import java.util.Map;
@@ -47,7 +45,7 @@ public class UnixUserIdUtils {
   public static ByteProducerPool configureProducerPool(Properties properties) {
     Map<String, Object> config = properties.entrySet().stream()
         .collect(Collectors.toMap(e -> e.getKey().toString(), Map.Entry::getValue));
-    KafkaClientSupplier clientSupplier = new DefaultKafkaClientSupplier();
+    KafkaClientSupplier clientSupplier = new KafkaClientSupplier();
     IdMappingServiceProvider unixIdMapper = UnixUserIdUtils.getUnixIdMapper();
     return new ByteProducerPool(config, clientSupplier, unixIdMapper);
   }

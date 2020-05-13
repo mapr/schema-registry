@@ -37,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
+            <artifactId>mapr-eco-tools</artifactId>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>

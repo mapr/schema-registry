@@ -23,8 +23,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
-import org.apache.kafka.streams.KafkaClientSupplier;
-import org.apache.kafka.streams.processor.internals.DefaultKafkaClientSupplier;
+import io.confluent.kafka.schemaregistry.util.KafkaClientSupplier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +32,7 @@ public class AuthorizationFilterProvider {
   private static final String INTERNAL_TOPIC = "schema-registry-authorization-auxiliary-topic";
 
   public static AuthorizationFilter configure(SchemaRegistryConfig schemaRegistryConfig) {
-    final KafkaClientSupplier clientSupplier = new DefaultKafkaClientSupplier();
+    final KafkaClientSupplier clientSupplier = new KafkaClientSupplier();
     final IdMappingServiceProvider idMapper = UnixUserIdUtils.getUnixIdMapper();
     final ByteConsumerPool consumerPool = createConsumerPool(clientSupplier, idMapper);
     final ByteProducerPool producerPool = createProducerPool(clientSupplier, idMapper);
