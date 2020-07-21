@@ -66,7 +66,7 @@
         <checkstyle.suppressions.location>checkstyle/suppressions.xml</checkstyle.suppressions.location>
         <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
         <kafka.version>2.1.1.0-mapr-SNAPSHOT</kafka.version>
-        <mapr.streams.version>6.2.0-mapr-SNAPSHOT</mapr.streams.version>
+        <mapr.streams.version>6.2.0.0-mapr-SNAPSHOT</mapr.streams.version>
         <junit.integration.categories>
             io.confluent.common.utils.IntegrationTest,
             org.apache.kafka.test.IntegrationTest
