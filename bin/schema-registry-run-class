@@ -181,6 +181,8 @@ fi
 
 MAPR_JMX_PORT=${MAPR_JMX_SCHEMA_REGISTRY_PORT:-3414}
 
+JMX_JAR=$(echo ${MAPR_HOME:-/opt/mapr}/lib/jmxagent*)
+
 if [ -z "$MAPR_JMXLOCALBINDING" ]; then
   MAPR_JMXLOCALBINDING="false"
 fi
@@ -217,7 +219,6 @@ if [[ ( -z "$MAPR_JMXDISABLE" || "$MAPR_JMXDISABLE" = 'false' ) && ( $MAIN == *"
   fi
 
   if [ "$isSecure" = "true" ] && [ "$MAPR_JMXREMOTEHOST" = "true" ]; then
-    JMX_JAR=$(echo ${MAPR_HOME:-/opt/mapr}/lib/jmxagent*)
     if [ -n "$JMX_JAR" ] && [ -f ${JMX_JAR} ]; then
       MAPR_JMX_OPTS="-javaagent:$JMX_JAR \
       -Dmapr.jmx.agent.login.config=$MAPR_LOGIN_CONFIG"
@@ -296,6 +297,10 @@ else
 fi
 
 SCHEMA_REGISTRY_JMX_OPTS=$MAPR_JMX_OPTS
+
+if [ -f ${JMX_JAR} ]; then
+  SCHEMA_REGISTRY_CLASSPATH=$SCHEMA_REGISTRY_CLASSPATH:$JMX_JAR
+fi
 
 # Launch mode
 if [ "x$DAEMON_MODE" = "xtrue" ]; then
