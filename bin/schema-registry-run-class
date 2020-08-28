@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# calling env var and its overridden file
+env=${MAPR_HOME:-/opt/mapr}/conf/env.sh
+[ -f $env ] && . $env
+
 if [ $# -lt 1 ];
 then
   echo "USAGE: $0 [-daemon] [-name servicename] [-loggc] classname [opts]"
@@ -201,7 +205,7 @@ if [ -z "$MAPR_JMXDISABLE" ] && [ -z "$MAPR_JMXLOCALHOST" ] && [ -z "$MAPR_JMXRE
   echo "No MapR JMX options given - defaulting to local binding"
 fi
 
-if [[ ( -z "$MAPR_JMXDISABLE" || "$MAPR_JMXDISABLE" = 'false' ) && \
+if [[ ( -z "$MAPR_JMXDISABLE" || "$MAPR_JMXDISABLE" = 'false' ) && ( $MAIN == *"SchemaRegistryMain" ) && \
       ( -z "$MAPR_JMX_SCHEMA_REGISTRY_ENABLE" || "$MAPR_JMX_SCHEMA_REGISTRY_ENABLE" = "true" ) ]]; then
 
   # default setting for localBinding
@@ -283,7 +287,11 @@ if [[ ( -z "$MAPR_JMXDISABLE" || "$MAPR_JMXDISABLE" = 'false' ) && \
     MAPR_JMX_OPTS="-Dcom.sun.management.jmxremote"
   fi
 else
-  echo "JMX disabled by user request"
+  if [[ $MAIN != *"SchemaRegistryMain" ]]; then
+    echo "JMX disabled - It is used for only Schema Registry server (skipped for avro consumer and producer)."
+  else
+    echo "JMX disabled by user request"
+  fi
   MAPR_JMX_OPTS=""
 fi
 
