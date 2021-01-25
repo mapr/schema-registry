@@ -66,7 +66,6 @@ import io.confluent.rest.RestConfig;
 import io.confluent.rest.exceptions.RestException;
 import org.apache.avro.reflect.Nullable;
 import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1223,7 +1222,6 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   private String kafkaClusterId(SchemaRegistryConfig config) throws SchemaRegistryException {
     Properties adminClientProps = new Properties();
     KafkaStore.addSchemaRegistryConfigsToClientProperties(config, adminClientProps);
-    adminClientProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapBrokers());
 
     try (AdminClient adminClient = AdminClient.create(adminClientProps)) {
       return adminClient
