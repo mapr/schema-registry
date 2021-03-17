@@ -1,0 +1,72 @@
+#!/bin/bash
+
+MAPR_HOME=${MAPR_HOME:-/opt/mapr}
+SCHEMA_REGISTRY_HOME="${SCHEMA_REGISTRY_HOME:-__INSTALL__}"
+SCHEMA_REGISTRY_CONF_FILE="${SCHEMA_REGISTRY_CONF_FILE:-${SCHEMA_REGISTRY_HOME}/etc/schema-registry/schema-registry.properties}"
+LOGFILE_BASE=${LOGFILE_BASE:-${SCHEMA_REGISTRY_HOME}/var/log/schema-registry/verify_service}
+PID_FILE=${MAPR_HOME}/pid/schemaregistry.pid
+
+EXIT_SUCCESS=0
+EXIT_NOT_RUNNING=1
+EXIT_RUNNING_NOT_RESPONDING=2
+EXIT_USAGE=3
+CONNECT_TIMEOUT=15
+USAGE="$0 [-q]"
+QUIET=0
+NOW=`date "+%Y%m%d_%H%M%S"`
+
+if [ $# -eq 1 ] && [ "$1" == '-q' ]; then
+    QUIET=1
+elif [ $# -ge 1 ]; then
+    echo $USAGE
+    exit $EXIT_USAGE
+fi
+
+# Check if the process is running
+echo "Starting verifier at $(date)" >> $LOGFILE_BASE.$NOW
+if [ -e "$PID_FILE" ] || [ -h "$PID_FILE" ]; then
+    schema_registry_pid=$(cat $PID_FILE 2> /dev/null)
+    if [ $? -ne 0 ]; then
+        PID_FILE=$(ls -l $PID_FILE | awk '{print $11}')
+        schema_registry_pid=$(cat $PID_FILE 2> /dev/null)
+    fi
+    if [ -z "$schema_registry_pid" ]; then
+        echo "ERROR - could not get pid for schema-registry" >> $LOGFILE_BASE.$NOW
+        exit $EXIT_NOT_RUNNING
+    fi
+    echo "checking to see if pid $schema_registry_pid is alive" >> $LOGFILE_BASE.$NOW
+    if kill -s 0 $schema_registry_pid ; then
+        echo "pid $schema_registry_pid is alive" >> $LOGFILE_BASE.$NOW
+        RC=$EXIT_RUNNING_NOT_RESPONDING
+    else
+        echo "pid $schema_registry_pid is NOT running" >> $LOGFILE_BASE.$NOW
+        [ $QUIET -eq 1 ] || cat $LOGFILE_BASE.$NOW
+        exit $EXIT_NOT_RUNNING
+    fi
+else
+    echo "no pid file, schema-registry is NOT running" >> $LOGFILE_BASE.$NOW
+    [ $QUIET -eq 1 ] || cat $LOGFILE_BASE.$NOW
+    exit $EXIT_NOT_RUNNING
+fi
+
+# Check if the process is responding
+echo "checking to see if schema-registry pid $schema_registry_pid is responsive" >> $LOGFILE_BASE.$NOW
+listeners=$(grep listeners "$SCHEMA_REGISTRY_CONF_FILE" | cut -d'=' -f 2 | sed -e 's/ //g')
+protocol=$(echo $listeners | cut -d':' -f 1 | sed -e 's/ //g')
+schema_registry_port=$(echo $listeners | cut -d':' -f 3 | sed -e 's/ //g')
+schema_registry_ip=$(hostname -i | head -n 1 | cut -d' ' -f1)
+if [ "$protocol" == "https" ]; then
+  OUTPUT=$(curl -umapr:mapr "$protocol://${schema_registry_ip}:${schema_registry_port}" -k)
+else
+  OUTPUT=$(curl "$protocol://${schema_registry_ip}:${schema_registry_port}")
+fi
+
+CRC=$?
+if [ $CRC -ne 0 ]; then
+    echo "schema-registry didn't respond - rc=$CRC, output = $OUTPUT" >> $LOGFILE_BASE.$NOW
+else
+    echo "schema-registry responded - rc=$CRC, output = $OUTPUT" >> $LOGFILE_BASE.$NOW
+    RC=$EXIT_SUCCESS
+fi
+[ $QUIET -eq 1 ] || cat $LOGFILE_BASE.$NOW
+exit $RC
