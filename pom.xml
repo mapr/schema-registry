@@ -67,6 +67,7 @@
         <kafka.connect.maven.plugin.version>0.11.1</kafka.connect.maven.plugin.version>
         <kafka.version>2.1.1.0-mapr-SNAPSHOT</kafka.version>
         <mapr.streams.version>6.2.0.0-mapr-SNAPSHOT</mapr.streams.version>
+        <hadoop.version>2.7.5.0-mapr-710-SNAPSHOT</hadoop.version>
         <junit.integration.categories>
             io.confluent.common.utils.IntegrationTest,
             org.apache.kafka.test.IntegrationTest
@@ -172,6 +173,12 @@
                 <artifactId>mapr-streams</artifactId>
                 <version>${mapr.streams.version}</version>
                 <scope>provided</scope>
+            </dependency>
+            <!-- Overriding hadoop version coming as mapr-streams dependency-->
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-common</artifactId>
+                <version>${hadoop.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.xml.ws</groupId>

@@ -70,6 +70,12 @@
             <artifactId>mapr-streams</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Overriding hadoop version coming as mapr-streams dependency-->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
