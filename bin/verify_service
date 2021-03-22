@@ -55,7 +55,7 @@ fi
 
 # Check if the process is responding
 echo "checking to see if schema-registry pid $schema_registry_pid is responsive" >> $LOGFILE_BASE.$NOW
-listeners=$(grep listeners "$SCHEMA_REGISTRY_CONF_FILE" | cut -d'=' -f 2 | sed -e 's/ //g')
+listeners=$(grep 'listeners=' "$SCHEMA_REGISTRY_CONF_FILE" | cut -d'=' -f 2 | sed -e 's/ //g')
 protocol=$(echo $listeners | cut -d':' -f 1 | sed -e 's/ //g')
 schema_registry_port=$(echo $listeners | cut -d':' -f 3 | sed -e 's/ //g')
 schema_registry_ip=$(hostname -i | head -n 1 | cut -d' ' -f1)
