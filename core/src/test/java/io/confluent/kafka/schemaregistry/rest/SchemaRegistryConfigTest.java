@@ -30,18 +30,27 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(MaprFSUtils.class)
+@PrepareForTest({MaprFSUtils.class, InetAddress.class, SchemaRegistryConfig.class})
 public class SchemaRegistryConfigTest {
   @Before
-  public void setUp() {
+  public void setUp() throws UnknownHostException {
     PowerMock.mockStatic(MaprFSUtils.class);
     EasyMock.expect(MaprFSUtils.getZKQuorum()).andReturn("none:8888");
     PowerMock.replay(MaprFSUtils.class);
+
+    InetAddress iaMock = EasyMock.createMock(InetAddress.class);
+    PowerMock.mockStatic(InetAddress.class);
+    EasyMock.expect(InetAddress.getLocalHost()).andReturn(iaMock);
+    PowerMock.replay(InetAddress.class);
+    EasyMock.expect(iaMock.getCanonicalHostName()).andReturn("localhost");
+    PowerMock.replay(iaMock);
   }
 
   @Test
