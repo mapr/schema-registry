@@ -1,6 +1,7 @@
 #!/bin/bash
 
 MAPR_HOME=${MAPR_HOME:-/opt/mapr}
+export MAPR_TICKETFILE_LOCATION=${MAPR_TICKETFILE_LOCATION:-"${MAPR_HOME}/conf/mapruserticket"}
 SCHEMA_REGISTRY_VERSION=`cat "${MAPR_HOME}/schema-registry/schema-registryversion"`
 SCHEMA_REGISTRY_HOME="${SCHEMA_REGISTRY_HOME:-${MAPR_HOME}/schema-registry/schema-registry-${SCHEMA_REGISTRY_VERSION}}"
 SCHEMA_REGISTRY_CONF_FILE="${SCHEMA_REGISTRY_CONF_FILE:-${SCHEMA_REGISTRY_HOME}/etc/schema-registry/schema-registry.properties}"
