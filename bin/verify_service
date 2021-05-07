@@ -57,15 +57,18 @@ echo "checking to see if schema-registry pid $schema_registry_pid is responsive"
 listeners=$(grep 'listeners=' "$SCHEMA_REGISTRY_CONF_FILE" | cut -d'=' -f 2 | sed -e 's/ //g')
 protocol=$(echo $listeners | cut -d':' -f 1 | sed -e 's/ //g')
 schema_registry_port=$(echo $listeners | cut -d':' -f 3 | sed -e 's/ //g')
-schema_registry_ip=$(hostname -i | head -n 1 | cut -d' ' -f1)
+schema_registry_ip=$(echo $listeners | cut -d':' -f 2 | sed -e 's/\///g')
+if [ "$schema_registry_ip" = "0.0.0.0" ]; then
+  schema_registry_ip="localhost"
+fi
 if [ "$protocol" == "https" ]; then
   # Getting MAPRSASL token
   token=$(java -cp `mapr classpath` com.mapr.security.client.examples.MapRClient gettoken -url "$protocol://${schema_registry_ip}:${schema_registry_port}" 2> /dev/null \
   |  grep 'Obtained challenge string' \
   |  sed -E 's/Obtained challenge string (.*)/\1/')
-  OUTPUT=$(curl -s --write-out '%{http_code}' -k -H "Authorization: MAPR-Negotiate ${token}" "$protocol://${schema_registry_ip}:${schema_registry_port}")
+  OUTPUT=$(curl --noproxy '*' -s --write-out '%{http_code}' -k -H "Authorization: MAPR-Negotiate ${token}" "$protocol://${schema_registry_ip}:${schema_registry_port}")
 else
-  OUTPUT=$(curl -s --write-out '%{http_code}' "$protocol://${schema_registry_ip}:${schema_registry_port}")
+  OUTPUT=$(curl --noproxy '*' -s --write-out '%{http_code}' "$protocol://${schema_registry_ip}:${schema_registry_port}")
 fi
 
 CRC=$?
