@@ -83,7 +83,8 @@
         <swagger.version>1.6.2</swagger.version>
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
         <kafka.version>2.6.1.0-mapr-SNAPSHOT</kafka.version>
-        <mapr.streams.version>6.2.0.0-mapr-SNAPSHOT</mapr.streams.version>
+        <kafka.eventstreams.version>0.1.0-SNAPSHOT</kafka.eventstreams.version>
+        <mapr.version>6.2.0.0-mapr-SNAPSHOT</mapr.version>
         <hadoop.version>2.7.5.100-mapr-720-SNAPSHOT</hadoop.version>
         <zookeeper.version>3.5.6-mapr-SNAPSHOT</zookeeper.version>
         <junit.integration.categories>
@@ -300,9 +301,9 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.mapr.streams</groupId>
-                <artifactId>mapr-streams</artifactId>
-                <version>${mapr.streams.version}</version>
+                <groupId>com.mapr.kafka</groupId>
+                <artifactId>kafka-eventstreams</artifactId>
+                <version>${kafka.eventstreams.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

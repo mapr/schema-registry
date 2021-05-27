@@ -44,8 +44,8 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.mapr.streams</groupId>
-            <artifactId>mapr-streams</artifactId>
+            <groupId>com.mapr.kafka</groupId>
+            <artifactId>kafka-eventstreams</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

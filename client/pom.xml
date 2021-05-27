@@ -24,8 +24,8 @@
             <artifactId>kafka_${kafka.scala.version}</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.mapr.streams</groupId>
-            <artifactId>mapr-streams</artifactId>
+            <groupId>com.mapr.kafka</groupId>
+            <artifactId>kafka-eventstreams</artifactId>
         </dependency>
 
         <dependency>
