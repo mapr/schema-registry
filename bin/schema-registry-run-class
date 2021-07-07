@@ -166,6 +166,7 @@ if [[ $MAIN == *"SchemaRegistryMain" ]]; then
 fi
 
 MAPR_CLIENT_CLASSPATH=$(mapr clientclasspath)
+MAPR_CLIENT_CLASSPATH=$MAPR_CLIENT_CLASSPATH:${find ${BASEMAPR:-/opt/mapr}/kafka -name "kafka-eventstreams-*.jar"}
 SCHEMA_REGISTRY_CLASSPATH=$CLASSPATH:$MAPR_CLIENT_CLASSPATH
 
 # To enable PAM:
