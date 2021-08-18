@@ -84,8 +84,9 @@
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
         <kafka.version>2.6.1.0-mapr-SNAPSHOT</kafka.version>
         <kafka.eventstreams.version>0.1.0-SNAPSHOT</kafka.eventstreams.version>
+        <jackson.version>2.11.1</jackson.version>
         <mapr.version>6.2.0.0-mapr-SNAPSHOT</mapr.version>
-        <hadoop.version>2.7.5.100-mapr-720-SNAPSHOT</hadoop.version>
+        <hadoop.version>2.7.6.0-mapr-720-SNAPSHOT</hadoop.version>
         <zookeeper.version>3.5.6-mapr-SNAPSHOT</zookeeper.version>
         <junit.integration.categories>
             io.confluent.common.utils.IntegrationTest,
