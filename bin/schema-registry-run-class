@@ -168,6 +168,11 @@ fi
 MAPR_CLIENT_CLASSPATH=$(mapr clientclasspath)
 KAFKA_EVENTSTREAMS_CLASSPATH=$(find ${BASEMAPR:-/opt/mapr}/kafka -name "kafka-eventstreams-*.jar")
 MAPR_CLIENT_CLASSPATH=$MAPR_CLIENT_CLASSPATH:$KAFKA_EVENTSTREAMS_CLASSPATH
+# Add mapr-security-web.jar
+for file in "${BASEMAPR:-/opt/mapr}"/lib/mapr-security-web-*.jar
+do
+  MAPR_CLIENT_CLASSPATH="$MAPR_CLIENT_CLASSPATH":"$file"
+done
 SCHEMA_REGISTRY_CLASSPATH=$CLASSPATH:$MAPR_CLIENT_CLASSPATH
 
 # To enable PAM:
