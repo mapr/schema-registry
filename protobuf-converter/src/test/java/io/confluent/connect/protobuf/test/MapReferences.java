@@ -125,6 +125,94 @@ public final class MapReferences {
     getUnknownFields() {
       return this.unknownFields;
     }
+    private MapReferencesMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) != 0)) {
+                map1_ = new java.util.ArrayList<io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              map1_.add(
+                  input.readMessage(io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(), extensionRegistry));
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) != 0)) {
+                map2_ = new java.util.ArrayList<io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              map2_.add(
+                  input.readMessage(io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(), extensionRegistry));
+              break;
+            }
+            case 26: {
+              io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.Builder subBuilder = null;
+              if (notAMap1_ != null) {
+                subBuilder = notAMap1_.toBuilder();
+              }
+              notAMap1_ = input.readMessage(io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(notAMap1_);
+                notAMap1_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 34: {
+              io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.Builder subBuilder = null;
+              if (notAMap2_ != null) {
+                subBuilder = notAMap2_.toBuilder();
+              }
+              notAMap2_ = input.readMessage(io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(notAMap2_);
+                notAMap2_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) != 0)) {
+          map1_ = java.util.Collections.unmodifiableList(map1_);
+        }
+        if (((mutable_bitField0_ & 0x00000002) != 0)) {
+          map2_ = java.util.Collections.unmodifiableList(map2_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return io.confluent.connect.protobuf.test.MapReferences.internal_static_MapReferencesMessage_descriptor;
@@ -296,7 +384,7 @@ public final class MapReferences {
       if (notAMap2_ != null) {
         output.writeMessage(4, getNotAMap2());
       }
-      getUnknownFields().writeTo(output);
+      unknownFields.writeTo(output);
     }
 
     @java.lang.Override
@@ -321,7 +409,7 @@ public final class MapReferences {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, getNotAMap2());
       }
-      size += getUnknownFields().getSerializedSize();
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -350,7 +438,7 @@ public final class MapReferences {
         if (!getNotAMap2()
             .equals(other.getNotAMap2())) return false;
       }
-      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
 
@@ -377,7 +465,7 @@ public final class MapReferences {
         hash = (37 * hash) + NOTAMAP2_FIELD_NUMBER;
         hash = (53 * hash) + getNotAMap2().hashCode();
       }
-      hash = (29 * hash) + getUnknownFields().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -494,31 +582,36 @@ public final class MapReferences {
 
       // Construct using io.confluent.connect.protobuf.test.MapReferences.MapReferencesMessage.newBuilder()
       private Builder() {
-
+        maybeForceBuilderInitialization();
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getMap1FieldBuilder();
+          getMap2FieldBuilder();
+        }
       }
       @java.lang.Override
       public Builder clear() {
         super.clear();
         if (map1Builder_ == null) {
           map1_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
         } else {
-          map1_ = null;
           map1Builder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000001);
         if (map2Builder_ == null) {
           map2_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
         } else {
-          map2_ = null;
           map2Builder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000002);
         if (notAMap1Builder_ == null) {
           notAMap1_ = null;
         } else {
@@ -692,7 +785,7 @@ public final class MapReferences {
         if (other.hasNotAMap2()) {
           mergeNotAMap2(other.getNotAMap2());
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
@@ -707,70 +800,17 @@ public final class MapReferences {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
+        io.confluent.connect.protobuf.test.MapReferences.MapReferencesMessage parsedMessage = null;
         try {
-          boolean done = false;
-          while (!done) {
-            int tag = input.readTag();
-            switch (tag) {
-              case 0:
-                done = true;
-                break;
-              case 10: {
-                io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry m =
-                    input.readMessage(
-                        io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(),
-                        extensionRegistry);
-                if (map1Builder_ == null) {
-                  ensureMap1IsMutable();
-                  map1_.add(m);
-                } else {
-                  map1Builder_.addMessage(m);
-                }
-                break;
-              } // case 10
-              case 18: {
-                io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry m =
-                    input.readMessage(
-                        io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.parser(),
-                        extensionRegistry);
-                if (map2Builder_ == null) {
-                  ensureMap2IsMutable();
-                  map2_.add(m);
-                } else {
-                  map2Builder_.addMessage(m);
-                }
-                break;
-              } // case 18
-              case 26: {
-                input.readMessage(
-                    getNotAMap1FieldBuilder().getBuilder(),
-                    extensionRegistry);
-
-                break;
-              } // case 26
-              case 34: {
-                input.readMessage(
-                    getNotAMap2FieldBuilder().getBuilder(),
-                    extensionRegistry);
-
-                break;
-              } // case 34
-              default: {
-                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
-                  done = true; // was an endgroup tag
-                }
-                break;
-              } // default:
-            } // switch (tag)
-          } // while (!done)
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.confluent.connect.protobuf.test.MapReferences.MapReferencesMessage) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          onChanged();
-        } // finally
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
         return this;
       }
       private int bitField0_;
@@ -1525,18 +1565,7 @@ public final class MapReferences {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        Builder builder = newBuilder();
-        try {
-          builder.mergeFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          throw e.setUnfinishedMessage(builder.buildPartial());
-        } catch (com.google.protobuf.UninitializedMessageException e) {
-          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
-        } catch (java.io.IOException e) {
-          throw new com.google.protobuf.InvalidProtocolBufferException(e)
-              .setUnfinishedMessage(builder.buildPartial());
-        }
-        return builder.buildPartial();
+        return new MapReferencesMessage(input, extensionRegistry);
       }
     };
 
@@ -1612,6 +1641,55 @@ public final class MapReferences {
     public final com.google.protobuf.UnknownFieldSet
     getUnknownFields() {
       return this.unknownFields;
+    }
+    private AttributeFieldEntry(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      if (extensionRegistry == null) {
+        throw new java.lang.NullPointerException();
+      }
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              key_ = s;
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              value_ = s;
+              break;
+            }
+            default: {
+              if (!parseUnknownField(
+                  input, unknownFields, extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
@@ -1722,7 +1800,7 @@ public final class MapReferences {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(value_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, value_);
       }
-      getUnknownFields().writeTo(output);
+      unknownFields.writeTo(output);
     }
 
     @java.lang.Override
@@ -1737,7 +1815,7 @@ public final class MapReferences {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(value_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, value_);
       }
-      size += getUnknownFields().getSerializedSize();
+      size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
     }
@@ -1756,7 +1834,7 @@ public final class MapReferences {
           .equals(other.getKey())) return false;
       if (!getValue()
           .equals(other.getValue())) return false;
-      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      if (!unknownFields.equals(other.unknownFields)) return false;
       return true;
     }
 
@@ -1771,7 +1849,7 @@ public final class MapReferences {
       hash = (53 * hash) + getKey().hashCode();
       hash = (37 * hash) + VALUE_FIELD_NUMBER;
       hash = (53 * hash) + getValue().hashCode();
-      hash = (29 * hash) + getUnknownFields().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
     }
@@ -1888,13 +1966,18 @@ public final class MapReferences {
 
       // Construct using io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry.newBuilder()
       private Builder() {
-
+        maybeForceBuilderInitialization();
       }
 
       private Builder(
           com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
         super(parent);
-
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
       }
       @java.lang.Override
       public Builder clear() {
@@ -1987,7 +2070,7 @@ public final class MapReferences {
           value_ = other.value_;
           onChanged();
         }
-        this.mergeUnknownFields(other.getUnknownFields());
+        this.mergeUnknownFields(other.unknownFields);
         onChanged();
         return this;
       }
@@ -2002,40 +2085,17 @@ public final class MapReferences {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
+        io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry parsedMessage = null;
         try {
-          boolean done = false;
-          while (!done) {
-            int tag = input.readTag();
-            switch (tag) {
-              case 0:
-                done = true;
-                break;
-              case 10: {
-                key_ = input.readStringRequireUtf8();
-
-                break;
-              } // case 10
-              case 18: {
-                value_ = input.readStringRequireUtf8();
-
-                break;
-              } // case 18
-              default: {
-                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
-                  done = true; // was an endgroup tag
-                }
-                break;
-              } // default:
-            } // switch (tag)
-          } // while (!done)
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (io.confluent.connect.protobuf.test.MapReferences.AttributeFieldEntry) e.getUnfinishedMessage();
           throw e.unwrapIOException();
         } finally {
-          onChanged();
-        } // finally
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
         return this;
       }
 
@@ -2223,18 +2283,7 @@ public final class MapReferences {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        Builder builder = newBuilder();
-        try {
-          builder.mergeFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          throw e.setUnfinishedMessage(builder.buildPartial());
-        } catch (com.google.protobuf.UninitializedMessageException e) {
-          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
-        } catch (java.io.IOException e) {
-          throw new com.google.protobuf.InvalidProtocolBufferException(e)
-              .setUnfinishedMessage(builder.buildPartial());
-        }
-        return builder.buildPartial();
+        return new AttributeFieldEntry(input, extensionRegistry);
       }
     };
 
