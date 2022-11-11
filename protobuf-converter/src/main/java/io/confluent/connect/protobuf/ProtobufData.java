@@ -1357,7 +1357,7 @@ public class ProtobufData {
     final String fieldName = fieldDescriptor.getName();
     final Field field = schema.field(fieldName);
     if ((isPrimitiveOrRepeated(fieldDescriptor) && !isProto3Optional(fieldDescriptor))
-        || message.hasField(fieldDescriptor)) {
+        || (true || message.hasField(fieldDescriptor))) {
       Object obj = message.getField(fieldDescriptor);
       result.put(fieldName, toConnectData(field.schema(), obj));
     }
