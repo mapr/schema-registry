@@ -15,6 +15,23 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.HttpHeaders;
+
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.ErrorMessage;
 import io.confluent.kafka.schemaregistry.client.rest.entities.Schema;
@@ -37,17 +54,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.validation.constraints.NotNull;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
 import javax.ws.rs.QueryParam;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,7 +77,7 @@ public class CompatibilityResource {
   }
 
   @POST
-  @Path("/subjects/{subject}/versions/{version}")
+  @Path("/subjects/{subject: .+}/versions/{version}")
   @DocumentedName("testVersionCompatibility")
   @Operation(summary = "Test schema compatibility against a particular schema subject-version",
       description =
@@ -102,6 +108,7 @@ public class CompatibilityResource {
               ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @PerformanceMetric("compatibility.subjects.versions.verify")
+  @RequirePermission(Permission.READ)
   public void testCompatibilityBySubjectName(
       final @Suspended AsyncResponse asyncResponse,
       @Parameter(description = "Subject of the schema version against which compatibility is to "
@@ -119,7 +126,19 @@ public class CompatibilityResource {
       @Parameter(description = "Schema", required = true)
       @NotNull RegisterSchemaRequest request,
       @Parameter(description = "Whether to return detailed error messages")
-      @QueryParam("verbose") boolean verbose) {
+      @QueryParam("verbose") boolean verbose,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      testCompatibilityBySubjectName(asyncResponse, subject, version,
+              normalize, request, verbose);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void testCompatibilityBySubjectName(AsyncResponse asyncResponse, String subject,
+                                              String version, boolean normalize,
+                                              RegisterSchemaRequest request, boolean verbose) {
     log.info("Testing schema subject {} compatibility between existing version {} and "
              + "specified version {}, id {}, type {}",
              subject, version, request.getVersion(), request.getId(), request.getSchemaType());

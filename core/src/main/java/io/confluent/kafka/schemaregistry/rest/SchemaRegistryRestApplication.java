@@ -15,6 +15,9 @@
 
 package io.confluent.kafka.schemaregistry.rest;
 
+import io.confluent.kafka.schemaregistry.filter.AuthorizationFilterProvider;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
+
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
 import io.confluent.kafka.schemaregistry.rest.extensions.SchemaRegistryResourceExtension;
 import io.confluent.kafka.schemaregistry.rest.filters.AliasFilter;
@@ -45,6 +48,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig.ENABLE_AUTHORIZATION_CONFIG;
+import static io.confluent.rest.RestConfig.ENABLE_AUTHENTICATION_CONFIG;
+import static io.confluent.rest.RestConfig.IMPERSONATION;
+
 public class SchemaRegistryRestApplication extends Application<SchemaRegistryConfig> {
 
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryRestApplication.class);
@@ -64,6 +71,7 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
 
   public SchemaRegistryRestApplication(SchemaRegistryConfig config) {
     super(config);
+    MaprFSUtils.createKafkaStoreInternalStreamIfNotExist(config);
   }
 
 
@@ -122,6 +130,27 @@ public class SchemaRegistryRestApplication extends Application<SchemaRegistryCon
 
     List<SchemaRegistryResourceExtension> schemaRegistryResourceExtensions =
         schemaRegistry.getResourceExtensions();
+
+    if (schemaRegistryConfig.getBoolean(ENABLE_AUTHORIZATION_CONFIG)) {
+      if (schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG)) {
+        config.register(AuthorizationFilterProvider.configure(schemaRegistryConfig));
+      } else {
+        log.error("Error starting the schema registry: "
+                      + "Authorization is not allowed without authentication. Configure {}=true",
+                  ENABLE_AUTHENTICATION_CONFIG);
+        System.exit(1);
+      }
+    }
+
+    if (schemaRegistryConfig.getBoolean(IMPERSONATION)) {
+      if (!schemaRegistryConfig.getBoolean(ENABLE_AUTHENTICATION_CONFIG)) {
+        log.error("Error starting the schema registry: "
+                      + "Impersonation is not allowed without authentication. Configure {}=true",
+                  ENABLE_AUTHENTICATION_CONFIG);
+        System.exit(1);
+      }
+    }
+
     if (schemaRegistryResourceExtensions != null) {
       try {
         for (SchemaRegistryResourceExtension

@@ -1,5 +1,7 @@
 package io.confluent.kafka.schemaregistry.client.security;
 
+import static org.easymock.EasyMock.mock;
+import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -17,12 +19,24 @@ import java.util.Map;
 
 import io.confluent.common.utils.TestUtils;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.config.types.Password;
 import org.apache.kafka.common.security.ssl.DefaultSslEngineFactory;
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@PowerMockIgnore({"javax.management.*", "javax.xml.*", "org.apache.xerces.*", "org.w3c.*", "javax.security.*", "javax.net.ssl.*", "javax.crypto.*"})
+@PrepareForTest(UserGroupInformation.class)
+@RunWith(PowerMockRunner.class)
+@SuppressStaticInitializationFor("com.mapr.baseutils.JVMProperties")
 public class SslFactoryTest {
 
   /*
@@ -189,6 +203,8 @@ public class SslFactoryTest {
   @Before
   public void setUp() {
     configs.put(SslConfigs.SSL_PROTOCOL_CONFIG, "TLSv1.2");
+    PowerMock.mockStaticPartial(UserGroupInformation.class, "getLoginUser", "isSecurityEnabled");
+    EasyMock.expect(UserGroupInformation.isSecurityEnabled()).andReturn(false).anyTimes();
   }
 
   @Test

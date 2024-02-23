@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+if [ \( "$1" = "purge" \) ]; then
+    echo POSTRM
+fi
+
+#
+# Regardless of whether this is a "remove" or "purge",
+# if the warden.schemaregistry.conf and schemaregistry tmp exists , then remove
+# the them.
+#
+if [ -f __PREFIX__/conf/conf.d/warden.schemaregistry.conf ]; then
+    rm -Rf __PREFIX__/conf/conf.d/warden.schemaregistry.conf
+fi
+
+if [ -h __PREFIX__/pid/schemaregistry.pid ]; then
+    rm -f __PREFIX__/pid/schemaregistry.pid
+fi

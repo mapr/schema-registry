@@ -7,16 +7,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>kafka-schema-registry-parent</artifactId>
-        <version>7.6.0</version>
+        <version>7.6.0.0-eep-930-SNAPSHOT</version>
     </parent>
-
-    <licenses>
-        <license>
-            <name>Apache License 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
 
     <groupId>io.confluent</groupId>
     <artifactId>client-console-scripts</artifactId>

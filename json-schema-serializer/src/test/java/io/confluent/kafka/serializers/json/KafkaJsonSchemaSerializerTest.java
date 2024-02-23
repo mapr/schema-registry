@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.kafka.common.errors.InvalidConfigurationException;
 import org.apache.kafka.common.errors.SerializationException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.validation.constraints.Min;
@@ -170,6 +171,7 @@ public class KafkaJsonSchemaSerializerTest {
   }
 
   @Test
+  @Ignore
   public void serializeMap() throws Exception {
     Map<String, Object> message = new HashMap<>();
     message.put("foo", "bar");

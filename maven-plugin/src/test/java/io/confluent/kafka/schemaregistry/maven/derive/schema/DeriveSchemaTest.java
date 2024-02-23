@@ -20,12 +20,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
 
+@PowerMockIgnore("javax.crypto.*")
+@PrepareForTest(UserGroupInformation.class)
+@RunWith(PowerMockRunner.class)
+@SuppressStaticInitializationFor("com.mapr.baseutils.JVMProperties")
 public abstract class DeriveSchemaTest {
 
   protected DeriveSchema derive;

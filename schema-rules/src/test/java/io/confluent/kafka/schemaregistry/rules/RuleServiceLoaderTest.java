@@ -17,6 +17,8 @@
 package io.confluent.kafka.schemaregistry.rules;
 
 import static com.google.common.collect.ImmutableList.*;
+import static org.easymock.EasyMock.mock;
+import static org.powermock.api.easymock.PowerMock.replay;
 
 import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
@@ -31,10 +33,23 @@ import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.hadoop.security.UserGroupInformation;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@PowerMockIgnore({"javax.management.*", "javax.xml.*", "org.apache.xerces.*", "org.w3c.*", "javax.security.*", "javax.net.ssl.*"})
+@PrepareForTest(UserGroupInformation.class)
+@RunWith(PowerMockRunner.class)
+@SuppressStaticInitializationFor("com.mapr.baseutils.JVMProperties")
 public class RuleServiceLoaderTest {
 
   private SchemaRegistryClient schemaRegistry;
@@ -68,4 +83,5 @@ public class RuleServiceLoaderTest {
     Assert.assertNotNull(instance);
     Assert.assertEquals(klass, instance.getClass());
   }
+
 }

@@ -26,15 +26,34 @@ import io.confluent.kafka.schemaregistry.client.rest.entities.Metadata;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.storage.KafkaSchemaRegistry;
 import io.confluent.kafka.schemaregistry.storage.SchemaValue;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import io.kcache.Cache;
 import io.kcache.utils.InMemoryCache;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import org.junit.Test;
 
+import org.easymock.EasyMock;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+@PowerMockIgnore("javax.crypto.*")
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(MaprFSUtils.class)
 public class MetadataEncoderServiceTest {
+
+  @Before
+  public void setUp() {
+    PowerMock.mockStatic(MaprFSUtils.class);
+    EasyMock.expect(MaprFSUtils.getZKQuorum()).andReturn("none:8888");
+    PowerMock.replay(MaprFSUtils.class);
+  }
 
   @Test
   public void testEncoding() throws Exception {

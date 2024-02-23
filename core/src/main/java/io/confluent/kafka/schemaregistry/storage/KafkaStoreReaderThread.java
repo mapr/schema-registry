@@ -15,6 +15,7 @@
 
 package io.confluent.kafka.schemaregistry.storage;
 
+import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 
 import io.confluent.kafka.schemaregistry.storage.StoreUpdateHandler.ValidationStatus;
@@ -29,7 +30,6 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
@@ -73,7 +73,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
   private final ReentrantLock offsetUpdateLock;
   private final Condition offsetReachedThreshold;
   private Consumer<byte[], byte[]> consumer;
-  private final Producer<byte[], byte[]> producer;
+  private final ByteProducerPool producerPool;
   private long offsetInSchemasTopic = -1L;
   private OffsetCheckpoint checkpointFile;
   private Map<TopicPartition, Long> checkpointFileCache = new HashMap<>();
@@ -90,7 +90,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
                                 StoreUpdateHandler<K, V> storeUpdateHandler,
                                 Serializer<K, V> serializer,
                                 Store<K, V> localStore,
-                                Producer<byte[], byte[]> producer,
+                                ByteProducerPool producerPool,
                                 K noopKey,
                                 AtomicBoolean initialized,
                                 SchemaRegistryConfig config) {
@@ -102,7 +102,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
     this.storeUpdateHandler = storeUpdateHandler;
     this.serializer = serializer;
     this.localStore = localStore;
-    this.producer = producer;
+    this.producerPool = producerPool;
     this.noopKey = noopKey;
     this.initialized = initialized;
 
@@ -124,7 +124,6 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, this.groupId);
     consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, "KafkaStore-reader-" + this.topic);
 
-    consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
     consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -256,7 +255,7 @@ public class KafkaStoreReaderThread<K, V> extends ShutdownableThread {
                       record.key(),
                       oldMessage == null ? null : serializer.serializeValue(oldMessage)
                   );
-                  producer.send(producerRecord);
+                  producerPool.send(producerRecord);
                   log.warn("Rollback invalid update to key {}", messageKey);
                 } catch (KafkaException | SerializationException ke) {
                   log.error("Failed to recover from invalid update to key {}", messageKey, ke);

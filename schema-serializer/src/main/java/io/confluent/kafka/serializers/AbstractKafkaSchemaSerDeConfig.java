@@ -29,8 +29,10 @@ import org.apache.kafka.common.config.ConfigDef.Importance;
 import org.apache.kafka.common.config.ConfigDef.Range;
 import  org.apache.kafka.common.config.ConfigDef.Type;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
+import io.confluent.kafka.schemaregistry.client.rest.utils.SchemaRegistryDiscoveryConfig;
 import io.confluent.kafka.serializers.subject.TopicNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Base class for configs for serializers and deserializers, defining a few common configs and
@@ -51,11 +53,12 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
   public static final String
       SCHEMA_REGISTRY_URL_DOC =
       "Comma-separated list of URLs for schema registry instances that can be used to register "
-      + "or look up schemas. "
+      + "or look up schemas.  If not specified then will be fetched from Zookeeper."
       + "If you wish to get a connection to a mocked schema registry for testing, "
       + "you can specify a scope using the 'mock://' pseudo-protocol. For example, "
       + "'mock://my-scope-name' corresponds to "
       + "'MockSchemaRegistry.getClientForScope(\"my-scope-name\")'.";
+  public static final String SCHEMA_REGISTRY_URL_STUB = "<fetched from Zookeeper>";
 
   public static final String MAX_SCHEMAS_PER_SUBJECT_CONFIG = "max.schemas.per.subject";
   public static final int MAX_SCHEMAS_PER_SUBJECT_DEFAULT = 1000;
@@ -153,6 +156,13 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
   /**
    * @deprecated use {@link #USER_INFO_CONFIG} instead
    */
+  public static final String MAPRSASL_AUTH_CONFIG = SchemaRegistryClientConfig
+          .MAPRSASL_AUTH_CONFIG;
+  public static final Boolean MAPRSASL_AUTH_DEFAULT =  UserGroupInformation.isSecurityEnabled();
+  public static final String MAPRSASL_AUTH_DOC =
+          "Enable MapR Sasl authentication for Avro Serializer/Deserializer. "
+                  + "The supported values are true, false.";
+
   @Deprecated
   public static final String SCHEMA_REGISTRY_USER_INFO_CONFIG =
       SchemaRegistryClientConfig.SCHEMA_REGISTRY_USER_INFO_CONFIG;
@@ -271,8 +281,8 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
           + "instances.";
 
   public static ConfigDef baseConfigDef() {
-    ConfigDef configDef = new ConfigDef()
-        .define(SCHEMA_REGISTRY_URL_CONFIG, Type.LIST,
+    ConfigDef configDef = SchemaRegistryDiscoveryConfig.defineDiscoveryProperties(new ConfigDef())
+        .define(SCHEMA_REGISTRY_URL_CONFIG, Type.LIST, SCHEMA_REGISTRY_URL_STUB,
                 Importance.HIGH, SCHEMA_REGISTRY_URL_DOC)
         .define(MAX_SCHEMAS_PER_SUBJECT_CONFIG, Type.INT, MAX_SCHEMAS_PER_SUBJECT_DEFAULT,
                 Importance.LOW, MAX_SCHEMAS_PER_SUBJECT_DOC)
@@ -306,6 +316,8 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
                 Importance.MEDIUM, BASIC_AUTH_CREDENTIALS_SOURCE_DOC)
         .define(BEARER_AUTH_CREDENTIALS_SOURCE, Type.STRING, BEARER_AUTH_CREDENTIALS_SOURCE_DEFAULT,
                 Importance.MEDIUM, BEARER_AUTH_CREDENTIALS_SOURCE_DOC)
+        .define(MAPRSASL_AUTH_CONFIG, Type.BOOLEAN, MAPRSASL_AUTH_DEFAULT,
+                Importance.MEDIUM, MAPRSASL_AUTH_DOC)
         .define(SCHEMA_REGISTRY_USER_INFO_CONFIG, Type.PASSWORD, SCHEMA_REGISTRY_USER_INFO_DEFAULT,
                 Importance.MEDIUM, SCHEMA_REGISTRY_USER_INFO_DOC)
         .define(USER_INFO_CONFIG, Type.PASSWORD, USER_INFO_DEFAULT,
@@ -357,8 +369,15 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
     return configDef;
   }
 
+  private List<String> schemaRegistryUrls;
+
   public AbstractKafkaSchemaSerDeConfig(ConfigDef config, Map<?, ?> props) {
     super(config, props);
+    if (getList(SCHEMA_REGISTRY_URL_CONFIG).contains(SCHEMA_REGISTRY_URL_STUB)) {
+      this.schemaRegistryUrls = getSchemaRegistryUrlsFromZookeeper();
+    } else {
+      this.schemaRegistryUrls = getList(SCHEMA_REGISTRY_URL_CONFIG);
+    }
   }
 
   public AbstractKafkaSchemaSerDeConfig(ConfigDef definition, Map<?, ?> originals, boolean doLog) {
@@ -370,7 +389,11 @@ public class AbstractKafkaSchemaSerDeConfig extends AbstractConfig {
   }
 
   public List<String> getSchemaRegistryUrls() {
-    return this.getList(SCHEMA_REGISTRY_URL_CONFIG);
+    return this.schemaRegistryUrls;
+  }
+
+  private List<String> getSchemaRegistryUrlsFromZookeeper() {
+    return SchemaRegistryDiscoveryConfig.configureDiscoveryClient(this).discoverUrls();
   }
 
   public boolean normalizeSchema() {

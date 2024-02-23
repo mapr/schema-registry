@@ -25,6 +25,9 @@ import io.confluent.kafka.schemaregistry.exceptions.ReferenceExistsException;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryStoreException;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryTimeoutException;
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import io.confluent.kafka.schemaregistry.exceptions.SubjectNotSoftDeletedException;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
 import io.confluent.kafka.schemaregistry.storage.KafkaSchemaRegistry;
@@ -53,6 +56,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
@@ -81,7 +85,7 @@ public class SubjectsResource {
 
   @POST
   @DocumentedName("lookUpSchemaUnderSubject")
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @Operation(summary = "Lookup schema under subject",
       description = "Check if a schema has already been registered under the specified subject."
       + " If so, this returns the schema string along with its globally unique identifier, its "
@@ -101,6 +105,7 @@ public class SubjectsResource {
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @PerformanceMetric("subjects.get-schema")
+  @RequirePermission(Permission.READ)
   public void lookUpSchemaUnderSubject(
       final @Suspended AsyncResponse asyncResponse,
       @Parameter(description = "Subject under which the schema will be registered", required = true)
@@ -110,7 +115,19 @@ public class SubjectsResource {
       @Parameter(description = "Whether to lookup deleted schemas")
       @QueryParam("deleted") boolean lookupDeletedSchema,
       @Parameter(description = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request) {
+      @NotNull RegisterSchemaRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      lookUpSchemaUnderSubject(asyncResponse, subject, normalize, lookupDeletedSchema, request);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void lookUpSchemaUnderSubject(AsyncResponse asyncResponse, String subject,
+                                        boolean normalize, boolean lookupDeletedSchema,
+                                        RegisterSchemaRequest request) {
+
     log.debug("Schema lookup under subject {}, deleted {}, type {}",
              subject, lookupDeletedSchema, request.getSchemaType());
 
@@ -212,6 +229,7 @@ public class SubjectsResource {
       })
   @Tags(@Tag(name = apiTag))
   @PerformanceMetric("subjects.list")
+  @RequirePermission(Permission.READ)
   public Set<String> list(
       @DefaultValue(QualifiedSubject.CONTEXT_WILDCARD)
       @Parameter(description = "Subject name prefix")
@@ -219,7 +237,17 @@ public class SubjectsResource {
       @Parameter(description = "Whether to look up deleted subjects")
       @QueryParam("deleted") boolean lookupDeletedSubjects,
       @Parameter(description = "Whether to return deleted subjects only")
-      @QueryParam("deletedOnly") boolean lookupDeletedOnlySubjects
+      @QueryParam("deletedOnly") boolean lookupDeletedOnlySubjects,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+      () -> list(subjectPrefix, lookupDeletedSubjects, lookupDeletedOnlySubjects), auth, cookie);
+  }
+
+  private Set<String> list(
+          @QueryParam("subjectPrefix") String subjectPrefix,
+          @QueryParam("deleted") boolean lookupDeletedSubjects,
+          @QueryParam("deletedOnly") boolean lookupDeletedOnlySubjects
   ) {
     LookupFilter filter = LookupFilter.DEFAULT;
     // if both deleted && deletedOnly are true, return deleted only
@@ -240,7 +268,7 @@ public class SubjectsResource {
 
   @DELETE
   @DocumentedName("deleteSubject")
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @Operation(summary = "Delete subject",
       description = "Deletes the specified subject and its associated compatibility level if "
         + "registered. It is recommended to use this API only when a topic needs to be recycled or "
@@ -261,13 +289,27 @@ public class SubjectsResource {
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @PerformanceMetric("subjects.delete-subject")
+  @RequirePermission(Permission.MODIFY)
   public void deleteSubject(
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = "Whether to perform a permanent delete")
-      @QueryParam("permanent") boolean permanentDelete) {
+      @QueryParam("permanent") boolean permanentDelete,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      deleteSubject(asyncResponse, headers, subject, permanentDelete);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void deleteSubject(AsyncResponse asyncResponse,
+                                     HttpHeaders headers,
+                                     String subject,
+                             boolean permanentDelete) {
+
     log.debug("Deleting subject {}", subject);
 
     subject = QualifiedSubject.normalize(schemaRegistry.tenant(), subject);
@@ -299,5 +341,4 @@ public class SubjectsResource {
     }
     asyncResponse.resume(deletedVersions);
   }
-
 }

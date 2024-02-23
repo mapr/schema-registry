@@ -48,8 +48,11 @@ import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.test.TestUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+// Kafka group coordination for SR is not implemented in MapR SR, see KAFKA-1015
+@Ignore
 public class SchemaRegistryCoordinatorTest {
 
   private static final String LEADER_ID = "leader";

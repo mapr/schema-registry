@@ -27,6 +27,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
 import org.apache.kafka.common.utils.Utils;
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.jdk.javaapi.CollectionConverters;
@@ -60,8 +61,17 @@ public class SchemaRegistryConfig extends RestConfig {
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryConfig.class);
   public static final String LISTENER_NAME_PREFIX = "listener.name.";
 
-  private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8081;
-  // TODO: change this to "http://0.0.0.0:8081" when PORT_CONFIG is deleted.
+  /**
+   * MapR specific constants.
+   */
+  public static final String SCHEMAREGISTRY_SERVICES_COMMON_FOLDER = "/apps/schema-registry/";
+
+  private static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
+
+  public static final String SCHEMAREGISTRY_ZK_URLS_DIR = "/sr_urls";
+
+  private static final int SCHEMAREGISTRY_PORT_DEFAULT = 8087;
+  // TODO: change this to "http://0.0.0.0:8087" when PORT_CONFIG is deleted.
   private static final String SCHEMAREGISTRY_LISTENERS_DEFAULT = "";
 
   public static final String SCHEMAREGISTRY_GROUP_ID_CONFIG = "schema.registry.group.id";
@@ -282,6 +292,10 @@ public class SchemaRegistryConfig extends RestConfig {
       "inter.instance.headers.whitelist";
   public static final String INTER_INSTANCE_LISTENER_NAME_CONFIG =
       "inter.instance.listener.name";
+  public static final String ENABLE_AUTHORIZATION_CONFIG =
+            "authorization.enable";
+  public static final boolean ENABLE_AUTHORIZATION_DEFAULT =
+            false;
 
   protected static final String SCHEMAREGISTRY_GROUP_ID_DOC =
       "Use this setting to override the group.id for the Kafka group used when Kafka is used for "
@@ -473,6 +487,15 @@ public class SchemaRegistryConfig extends RestConfig {
       = "Name of listener used for communication between schema registry instances. If this value "
       + "is unset, the listener used is defined by inter.instance.protocol. If both properties "
       + "are set at the same time, inter.instance.listener.name takes precedence.";
+
+  protected static final String ENABLE_AUTHORIZATION_DOC =
+      "Set 'true' or 'false' to enable or disable authorization for Schema Registry service";
+
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_CONFIG = "schema.registry.service.id";
+  public static final String
+          SCHEMA_REGISTRY_SERVICE_ID_DEFAULT = "default_";
+
   private static final String COMPATIBILITY_DEFAULT = "backward";
   private static final String METRICS_JMX_PREFIX_DEFAULT_OVERRIDE = "kafka.schema.registry";
 
@@ -482,6 +505,11 @@ public class SchemaRegistryConfig extends RestConfig {
   public static final String HTTP = "http";
 
   private final Properties originalProperties;
+  private final String kafkaStoreStreamFolder;
+  private final String kafkaStoreStream;
+  private final String kafkaStoreTopic;
+  private final String schemaRegistryZkNamespace;
+
 
   static {
     config = baseSchemaRegistryConfigDef();
@@ -496,7 +524,7 @@ public class SchemaRegistryConfig extends RestConfig {
         SCHEMA_REGISTRY_MOST_SPECIFIC_DEFAULT,
         METRICS_JMX_PREFIX_DEFAULT_OVERRIDE
     )
-    .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, "",
+    .define(KAFKASTORE_CONNECTION_URL_CONFIG, ConfigDef.Type.STRING, MaprFSUtils.getZKQuorum(),
         ConfigDef.Importance.HIGH, KAFKASTORE_CONNECTION_URL_DOC
     )
     .define(KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, ConfigDef.Type.LIST, "",
@@ -720,8 +748,18 @@ public class SchemaRegistryConfig extends RestConfig {
     .define(INTER_INSTANCE_PROTOCOL_CONFIG, ConfigDef.Type.STRING, HTTP,
             ConfigDef.Importance.LOW, SCHEMAREGISTRY_INTER_INSTANCE_PROTOCOL_DOC)
     .define(INTER_INSTANCE_LISTENER_NAME_CONFIG, ConfigDef.Type.STRING, "",
-      ConfigDef.Importance.LOW, INTER_INSTANCE_LISTENER_NAME_DOC);
-
+      ConfigDef.Importance.LOW, INTER_INSTANCE_LISTENER_NAME_DOC)
+    .define(
+            SCHEMA_REGISTRY_SERVICE_ID_CONFIG,
+            ConfigDef.Type.STRING,
+            SCHEMA_REGISTRY_SERVICE_ID_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+            "Indicates the ID of the schema registry service.")
+    .define(ENABLE_AUTHORIZATION_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            ENABLE_AUTHORIZATION_DEFAULT,
+            ConfigDef.Importance.LOW,
+            ENABLE_AUTHORIZATION_DOC);
   }
 
   private final CompatibilityLevel compatibilityType;
@@ -761,6 +799,27 @@ public class SchemaRegistryConfig extends RestConfig {
       throw new RestConfigException("Unknown compatibility level: " + compatibilityTypeString);
     }
     buildMetricsContextLabels();
+    final String serviceId = getString(SCHEMA_REGISTRY_SERVICE_ID_CONFIG);
+    kafkaStoreStreamFolder = SCHEMAREGISTRY_SERVICES_COMMON_FOLDER + serviceId;
+    kafkaStoreStream = kafkaStoreStreamFolder + "/schema-registry-internal-stream";
+    kafkaStoreTopic = kafkaStoreStream + ":_schemas";
+    schemaRegistryZkNamespace = SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + serviceId;
+  }
+
+  public String getKafkaStoreStream() {
+    return kafkaStoreStream;
+  }
+
+  public String getKafkaStoreStreamFolder() {
+    return kafkaStoreStreamFolder;
+  }
+
+  public String getKafkaStoreTopic() {
+    return kafkaStoreTopic;
+  }
+
+  public String getSchemaRegistryZkNameSpace() {
+    return schemaRegistryZkNamespace;
   }
 
   private static String getDefaultHost() {

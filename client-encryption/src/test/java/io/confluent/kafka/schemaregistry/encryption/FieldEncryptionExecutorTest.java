@@ -88,11 +88,21 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.junit.After;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+@PowerMockIgnore("javax.crypto.*")
+@PrepareForTest(UserGroupInformation.class)
+@RunWith(PowerMockRunner.class)
+@SuppressStaticInitializationFor("com.mapr.baseutils.JVMProperties")
 public abstract class FieldEncryptionExecutorTest {
 
   static {

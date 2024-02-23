@@ -38,6 +38,8 @@ import io.confluent.kafka.schemaregistry.client.security.bearerauth.BearerAuthCr
 
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.config.ConfigException;
+import com.mapr.security.client.ClientSecurity;
+import com.mapr.security.client.MapRClientSecurityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,78 +84,78 @@ public class RestService implements Closeable, Configurable {
 
   private static final Logger log = LoggerFactory.getLogger(RestService.class);
   private static final TypeReference<RegisterSchemaResponse> REGISTER_RESPONSE_TYPE =
-      new TypeReference<RegisterSchemaResponse>() {
-      };
+          new TypeReference<RegisterSchemaResponse>() {
+          };
   private static final TypeReference<Config> GET_CONFIG_RESPONSE_TYPE =
-      new TypeReference<Config>() {
-      };
+          new TypeReference<Config>() {
+          };
   private static final TypeReference<Mode> GET_MODE_RESPONSE_TYPE =
-      new TypeReference<Mode>() {
-      };
+          new TypeReference<Mode>() {
+          };
   private static final TypeReference<List<Schema>> GET_SCHEMAS_RESPONSE_TYPE =
-      new TypeReference<List<Schema>>() {
-      };
+          new TypeReference<List<Schema>>() {
+          };
   private static final TypeReference<SchemaString> GET_SCHEMA_BY_ID_RESPONSE_TYPE =
-      new TypeReference<SchemaString>() {
-      };
+          new TypeReference<SchemaString>() {
+          };
   private static final TypeReference<List<String>> GET_SCHEMA_TYPES_TYPE =
-      new TypeReference<List<String>>() {
-      };
+          new TypeReference<List<String>>() {
+          };
   private static final TypeReference<JsonNode> GET_SCHEMA_ONLY_BY_VERSION_RESPONSE_TYPE =
-      new TypeReference<JsonNode>() {
-      };
+          new TypeReference<JsonNode>() {
+          };
   private static final TypeReference<Schema> GET_SCHEMA_RESPONSE_TYPE =
-      new TypeReference<Schema>() {
-      };
+          new TypeReference<Schema>() {
+          };
   private static final TypeReference<List<Integer>> GET_REFERENCED_BY_RESPONSE_TYPE =
-      new TypeReference<List<Integer>>() {
-      };
+          new TypeReference<List<Integer>>() {
+          };
   private static final TypeReference<List<Integer>> ALL_VERSIONS_RESPONSE_TYPE =
-      new TypeReference<List<Integer>>() {
-      };
+          new TypeReference<List<Integer>>() {
+          };
   private static final TypeReference<List<String>> ALL_CONTEXTS_RESPONSE_TYPE =
-      new TypeReference<List<String>>() {
-      };
+          new TypeReference<List<String>>() {
+          };
   private static final TypeReference<List<String>> ALL_TOPICS_RESPONSE_TYPE =
-      new TypeReference<List<String>>() {
-      };
+          new TypeReference<List<String>>() {
+          };
   private static final TypeReference<List<SubjectVersion>> GET_VERSIONS_RESPONSE_TYPE =
-      new TypeReference<List<SubjectVersion>>() {
-      };
+          new TypeReference<List<SubjectVersion>>() {
+          };
   private static final TypeReference<CompatibilityCheckResponse>
-      COMPATIBILITY_CHECK_RESPONSE_TYPE_REFERENCE =
-      new TypeReference<CompatibilityCheckResponse>() {
-      };
+          COMPATIBILITY_CHECK_RESPONSE_TYPE_REFERENCE =
+          new TypeReference<CompatibilityCheckResponse>() {
+          };
   private static final TypeReference<Schema>
-      SUBJECT_SCHEMA_VERSION_RESPONSE_TYPE_REFERENCE =
-      new TypeReference<Schema>() {
-      };
+          SUBJECT_SCHEMA_VERSION_RESPONSE_TYPE_REFERENCE =
+          new TypeReference<Schema>() {
+          };
   private static final TypeReference<ConfigUpdateRequest>
-      UPDATE_CONFIG_RESPONSE_TYPE_REFERENCE =
-      new TypeReference<ConfigUpdateRequest>() {
-      };
+          UPDATE_CONFIG_RESPONSE_TYPE_REFERENCE =
+          new TypeReference<ConfigUpdateRequest>() {
+          };
   private static final TypeReference<ModeUpdateRequest>
-      UPDATE_MODE_RESPONSE_TYPE_REFERENCE =
-      new TypeReference<ModeUpdateRequest>() {
-      };
+          UPDATE_MODE_RESPONSE_TYPE_REFERENCE =
+          new TypeReference<ModeUpdateRequest>() {
+          };
   private static final TypeReference<Integer> DELETE_SUBJECT_VERSION_RESPONSE_TYPE =
-      new TypeReference<Integer>() {
-      };
+          new TypeReference<Integer>() {
+          };
   private static final TypeReference<? extends List<Integer>> DELETE_SUBJECT_RESPONSE_TYPE =
-      new TypeReference<List<Integer>>() {
-      };
+          new TypeReference<List<Integer>>() {
+          };
   private static final TypeReference<Mode> DELETE_SUBJECT_MODE_RESPONSE_TYPE =
-      new TypeReference<Mode>() {
-      };
+          new TypeReference<Mode>() {
+          };
   private static final TypeReference<Config> DELETE_SUBJECT_CONFIG_RESPONSE_TYPE =
-      new TypeReference<Config>() {
-      };
+          new TypeReference<Config>() {
+          };
   private static final TypeReference<ServerClusterId> GET_CLUSTER_ID_RESPONSE_TYPE =
-      new TypeReference<ServerClusterId>() {
-      };
+          new TypeReference<ServerClusterId>() {
+          };
   private static final TypeReference<SchemaRegistryServerVersion> GET_SR_VERSION_RESPONSE_TYPE =
-      new TypeReference<SchemaRegistryServerVersion>() {
-      };
+          new TypeReference<SchemaRegistryServerVersion>() {
+          };
 
 
 
@@ -169,7 +171,7 @@ public class RestService implements Closeable, Configurable {
 
   static {
     DEFAULT_REQUEST_PROPERTIES =
-        Collections.singletonMap("Content-Type", Versions.SCHEMA_REGISTRY_V1_JSON_WEIGHTED);
+            Collections.singletonMap("Content-Type", Versions.SCHEMA_REGISTRY_V1_JSON_WEIGHTED);
   }
 
   private UrlList baseUrls;
@@ -182,6 +184,8 @@ public class RestService implements Closeable, Configurable {
   private Map<String, String> httpHeaders;
   private Proxy proxy;
   private boolean isForward;
+  private boolean maprSaslAuth = false;
+  private String authCookie;
 
   public RestService(UrlList baseUrls) {
     this(baseUrls, false);
@@ -210,39 +214,42 @@ public class RestService implements Closeable, Configurable {
     setHttpReadTimeoutMs(SchemaRegistryClientConfig.getHttpReadTimeoutMs(configs));
 
     String basicCredentialsSource =
-        (String) configs.get(SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE);
+            (String) configs.get(SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE);
     String bearerCredentialsSource =
-        (String) configs.get(SchemaRegistryClientConfig.BEARER_AUTH_CREDENTIALS_SOURCE);
+            (String) configs.get(SchemaRegistryClientConfig.BEARER_AUTH_CREDENTIALS_SOURCE);
 
     if (isNonEmpty(basicCredentialsSource) && isNonEmpty(bearerCredentialsSource)) {
       throw new ConfigException(String.format(
-          "Only one of '%s' and '%s' may be specified",
-          SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE,
-          SchemaRegistryClientConfig.BEARER_AUTH_CREDENTIALS_SOURCE
+              "Only one of '%s' and '%s' may be specified",
+              SchemaRegistryClientConfig.BASIC_AUTH_CREDENTIALS_SOURCE,
+              SchemaRegistryClientConfig.BEARER_AUTH_CREDENTIALS_SOURCE
       ));
 
     } else if (isNonEmpty(basicCredentialsSource)) {
       BasicAuthCredentialProvider basicAuthCredentialProvider =
-          BasicAuthCredentialProviderFactory.getBasicAuthCredentialProvider(
-              basicCredentialsSource,
-              configs
-          );
+              BasicAuthCredentialProviderFactory.getBasicAuthCredentialProvider(
+                      basicCredentialsSource,
+                      configs
+              );
       setBasicAuthCredentialProvider(basicAuthCredentialProvider);
 
     } else if (isNonEmpty(bearerCredentialsSource)) {
       BearerAuthCredentialProvider bearerAuthCredentialProvider =
-          BearerAuthCredentialProviderFactory.getBearerAuthCredentialProvider(
-              bearerCredentialsSource,
-              configs
-          );
+              BearerAuthCredentialProviderFactory.getBearerAuthCredentialProvider(
+                      bearerCredentialsSource,
+                      configs
+              );
       setBearerAuthCredentialProvider(bearerAuthCredentialProvider);
+    } else {
+      String maprSasl = (String) configs.get(SchemaRegistryClientConfig.MAPRSASL_AUTH_CONFIG);
+      setMaprSaslAuth(Boolean.valueOf(maprSasl));
     }
 
     String proxyHost = (String) configs.get(SchemaRegistryClientConfig.PROXY_HOST);
     Object proxyPortVal = configs.get(SchemaRegistryClientConfig.PROXY_PORT);
     Integer proxyPort = proxyPortVal instanceof String
-                        ? Integer.valueOf((String) proxyPortVal)
-                        : (Integer) proxyPortVal;
+            ? Integer.valueOf((String) proxyPortVal)
+            : (Integer) proxyPortVal;
 
     if (isValidProxyConfig(proxyHost, proxyPort)) {
       setProxy(proxyHost, proxyPort);
@@ -255,6 +262,19 @@ public class RestService implements Closeable, Configurable {
 
   private static boolean isValidProxyConfig(String proxyHost, Integer proxyPort) {
     return isNonEmpty(proxyHost) && proxyPort != null && proxyPort > 0;
+  }
+
+  public static String readChallengeString() {
+    ClientSecurity cs = new ClientSecurity();
+    try {
+      return cs.generateChallenge();
+    } catch (MapRClientSecurityException e) {
+      throw new RuntimeException("Cannot read chalange string", e);
+    }
+  }
+
+  public void setMaprSaslAuth(Boolean maprSaslAuth) {
+    this.maprSaslAuth = maprSaslAuth != null && maprSaslAuth;
   }
 
   public void setSslSocketFactory(SSLSocketFactory sslSocketFactory) {
@@ -285,13 +305,13 @@ public class RestService implements Closeable, Configurable {
   private <T> T sendHttpRequest(String requestUrl, String method, byte[] requestBodyData,
                                 Map<String, String> requestProperties,
                                 TypeReference<T> responseFormat)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String requestData = requestBodyData == null
-                         ? "null"
-                         : new String(requestBodyData, StandardCharsets.UTF_8);
+            ? "null"
+            : new String(requestBodyData, StandardCharsets.UTF_8);
     log.debug(String.format("Sending %s with input %s to %s",
-                            method, requestData,
-                            requestUrl));
+            method, requestData,
+            requestUrl));
 
     HttpURLConnection connection = null;
     try {
@@ -312,6 +332,7 @@ public class RestService implements Closeable, Configurable {
 
       int responseCode = connection.getResponseCode();
       if (responseCode == HttpURLConnection.HTTP_OK) {
+        extractAuthCookieFromResponse(connection);
         InputStream is = connection.getInputStream();
         T result = jsonDeserializer.readValue(is, responseFormat);
         is.close();
@@ -319,21 +340,7 @@ public class RestService implements Closeable, Configurable {
       } else if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
         return null;
       } else {
-        ErrorMessage errorMessage;
-        try (InputStream es = connection.getErrorStream()) {
-          if (es != null) {
-            String errorString = CharStreams.toString(new InputStreamReader(es, Charsets.UTF_8));
-            try {
-              errorMessage = jsonDeserializer.readValue(errorString, ErrorMessage.class);
-            } catch (JsonProcessingException e) {
-              errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, errorString);
-            }
-          } else {
-            errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, "Error");
-          }
-        }
-        throw new RestClientException(errorMessage.getMessage(), responseCode,
-                                      errorMessage.getErrorCode());
+        return handleBadResponse(connection);
       }
 
     } finally {
@@ -343,9 +350,35 @@ public class RestService implements Closeable, Configurable {
     }
   }
 
+  private <T> T handleBadResponse(HttpURLConnection connection)
+          throws IOException, RestClientException {
+    int responseCode = connection.getResponseCode();
+    // Auth handlers do not return json hence throw human-readable messages
+    if (responseCode == 401 || responseCode == 403) {
+      throw new RestClientException(connection.getResponseMessage(),
+              responseCode, responseCode);
+    }
+
+    ErrorMessage errorMessage;
+    try (InputStream es = connection.getErrorStream()) {
+      if (es != null) {
+        String errorString = CharStreams.toString(new InputStreamReader(es, Charsets.UTF_8));
+        try {
+          errorMessage = jsonDeserializer.readValue(errorString, ErrorMessage.class);
+        } catch (JsonProcessingException e) {
+          errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, errorString);
+        }
+      } else {
+        errorMessage = new ErrorMessage(JSON_PARSE_ERROR_CODE, "Error");
+      }
+    }
+    throw new RestClientException(errorMessage.getMessage(), responseCode,
+            errorMessage.getErrorCode());
+  }
+
   private HttpURLConnection buildConnection(URL url, String method, Map<String,
-                                            String> requestProperties)
-      throws IOException {
+          String> requestProperties)
+          throws IOException {
     HttpURLConnection connection = null;
     if (proxy == null) {
       connection = (HttpURLConnection) url.openConnection();
@@ -358,7 +391,7 @@ public class RestService implements Closeable, Configurable {
 
     setupSsl(connection);
     connection.setRequestMethod(method);
-    setAuthRequestHeaders(connection);
+    setAuthRequestHeaderOrCookie(connection);
     setCustomHeaders(connection);
     // connection.getResponseCode() implicitly calls getInputStream, so always set to true.
     // On the other hand, leaving this out breaks nothing.
@@ -398,7 +431,7 @@ public class RestService implements Closeable, Configurable {
                            byte[] requestBodyData,
                            Map<String, String> requestProperties,
                            TypeReference<T> responseFormat)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     if (isForward) {
       requestProperties.put(X_FORWARD_HEADER, "true");
     }
@@ -406,11 +439,27 @@ public class RestService implements Closeable, Configurable {
       String baseUrl = baseUrls.current();
       String requestUrl = buildRequestUrl(baseUrl, path);
       try {
-        return sendHttpRequest(requestUrl,
-                               method,
-                               requestBodyData,
-                               requestProperties,
-                               responseFormat);
+        try {
+          return sendHttpRequest(requestUrl,
+                  method,
+                  requestBodyData,
+                  requestProperties,
+                  responseFormat);
+        } catch (RestClientException e) {
+          // If we get 401 (UNATHORIZED) this means that authCookie is expired
+          // (or invalid beacuse of another reason).
+          // We will use credentials or challange string
+          // for authentication. authCookie will be updated.
+          if (e.getStatus() == 401 && authCookie != null) {
+            authCookie = null;
+            return sendHttpRequest(requestUrl,
+                    method,
+                    requestBodyData,
+                    requestProperties,
+                    responseFormat);
+          }
+          throw e;
+        }
       } catch (IOException e) {
         baseUrls.fail(baseUrl);
         if (i == n - 1) {
@@ -429,7 +478,7 @@ public class RestService implements Closeable, Configurable {
 
   // Visible for testing
   public Schema lookUpSubjectVersion(String schemaString, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return lookUpSubjectVersion(schemaString, subject, false);
   }
 
@@ -437,7 +486,7 @@ public class RestService implements Closeable, Configurable {
   public Schema lookUpSubjectVersion(String schemaString,
                                      String subject,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return lookUpSubjectVersion(schemaString, subject, false, lookupDeletedSchema);
   }
 
@@ -445,11 +494,11 @@ public class RestService implements Closeable, Configurable {
                                      String subject,
                                      boolean normalize,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     return lookUpSubjectVersion(
-        DEFAULT_REQUEST_PROPERTIES, request, subject, normalize, lookupDeletedSchema);
+            DEFAULT_REQUEST_PROPERTIES, request, subject, normalize, lookupDeletedSchema);
   }
 
   public Schema lookUpSubjectVersion(String schemaString,
@@ -457,9 +506,9 @@ public class RestService implements Closeable, Configurable {
                                      List<SchemaReference> references,
                                      String subject,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return lookUpSubjectVersion(
-        schemaString, schemaType, references, subject, false, lookupDeletedSchema);
+            schemaString, schemaType, references, subject, false, lookupDeletedSchema);
   }
 
   public Schema lookUpSubjectVersion(String schemaString,
@@ -468,22 +517,23 @@ public class RestService implements Closeable, Configurable {
                                      String subject,
                                      boolean normalize,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     request.setSchemaType(schemaType);
     request.setReferences(references);
     return lookUpSubjectVersion(
-        DEFAULT_REQUEST_PROPERTIES, request, subject, normalize, lookupDeletedSchema);
+            DEFAULT_REQUEST_PROPERTIES, request, subject, normalize, lookupDeletedSchema);
   }
 
   public Schema lookUpSubjectVersion(RegisterSchemaRequest registerSchemaRequest,
                                      String subject,
                                      boolean normalize,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return lookUpSubjectVersion(
-        DEFAULT_REQUEST_PROPERTIES, registerSchemaRequest, subject, normalize, lookupDeletedSchema);
+            DEFAULT_REQUEST_PROPERTIES, registerSchemaRequest, subject, normalize,
+            lookupDeletedSchema);
   }
 
   public Schema lookUpSubjectVersion(Map<String, String> requestProperties,
@@ -491,27 +541,27 @@ public class RestService implements Closeable, Configurable {
                                      String subject,
                                      boolean normalize,
                                      boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}")
-        .queryParam("normalize", normalize)
-        .queryParam("deleted", lookupDeletedSchema);
+            .queryParam("normalize", normalize)
+            .queryParam("deleted", lookupDeletedSchema);
     String path = builder.build(subject).toString();
 
     Schema schema = httpRequest(path, "POST",
-                                registerSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
-                                requestProperties, SUBJECT_SCHEMA_VERSION_RESPONSE_TYPE_REFERENCE);
+            registerSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
+            requestProperties, SUBJECT_SCHEMA_VERSION_RESPONSE_TYPE_REFERENCE);
     return schema;
   }
 
   // Visible for testing
   public int registerSchema(String schemaString, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return registerSchema(schemaString, subject, false).getId();
   }
 
   public RegisterSchemaResponse registerSchema(String schemaString, String subject,
                                                boolean normalize)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     return registerSchema(request, subject, normalize);
@@ -519,14 +569,14 @@ public class RestService implements Closeable, Configurable {
 
   public RegisterSchemaResponse registerSchema(String schemaString, String schemaType,
                                                List<SchemaReference> references, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return registerSchema(schemaString, schemaType, references, subject, false);
   }
 
   public RegisterSchemaResponse registerSchema(String schemaString, String schemaType,
                                                List<SchemaReference> references,
                                                String subject, boolean normalize)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     request.setSchemaType(schemaType);
@@ -536,13 +586,13 @@ public class RestService implements Closeable, Configurable {
 
   // Visible for testing
   public int registerSchema(String schemaString, String subject, int version, int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return registerSchema(schemaString, subject, version, id, false).getId();
   }
 
   public RegisterSchemaResponse registerSchema(String schemaString, String subject,
                                                int version, int id, boolean normalize)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     request.setVersion(version);
@@ -553,14 +603,14 @@ public class RestService implements Closeable, Configurable {
   public RegisterSchemaResponse registerSchema(String schemaString, String schemaType,
                                                List<SchemaReference> references, String subject,
                                                int version, int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return registerSchema(schemaString, schemaType, references, subject, version, id, false);
   }
 
   public RegisterSchemaResponse registerSchema(String schemaString, String schemaType,
                                                List<SchemaReference> references, String subject,
                                                int version, int id, boolean normalize)
-                            throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     request.setSchemaType(schemaType);
@@ -573,7 +623,7 @@ public class RestService implements Closeable, Configurable {
   public RegisterSchemaResponse registerSchema(RegisterSchemaRequest registerSchemaRequest,
                                                String subject,
                                                boolean normalize)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return registerSchema(DEFAULT_REQUEST_PROPERTIES, registerSchemaRequest, subject, normalize);
   }
 
@@ -581,16 +631,16 @@ public class RestService implements Closeable, Configurable {
                                                RegisterSchemaRequest registerSchemaRequest,
                                                String subject,
                                                boolean normalize)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions")
-        .queryParam("normalize", normalize);
+            .queryParam("normalize", normalize);
     String path = builder.build(subject).toString();
 
     RegisterSchemaResponse response = httpRequest(
-        path, "POST",
-        registerSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
-        requestProperties,
-        REGISTER_RESPONSE_TYPE);
+            path, "POST",
+            registerSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
+            requestProperties,
+            REGISTER_RESPONSE_TYPE);
 
     return response;
   }
@@ -599,21 +649,21 @@ public class RestService implements Closeable, Configurable {
                                                  TagSchemaRequest tagSchemaRequest,
                                                  String subject,
                                                  String version)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/{version}/tags");
     String path = builder.build(subject, version).toString();
 
     RegisterSchemaResponse response = httpRequest(
-        path, "POST",
-        tagSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
-        requestProperties,
-        REGISTER_RESPONSE_TYPE);
+            path, "POST",
+            tagSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
+            requestProperties,
+            REGISTER_RESPONSE_TYPE);
 
     return response;
   }
 
   public List<String> testCompatibility(String schemaString, String subject, boolean verbose)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     return testCompatibility(request, subject, null, false, verbose);
@@ -621,7 +671,7 @@ public class RestService implements Closeable, Configurable {
 
   // Visible for testing
   public List<String> testCompatibility(String schemaString, String subject, String version)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     return testCompatibility(request, subject, version, false, false);
@@ -633,7 +683,7 @@ public class RestService implements Closeable, Configurable {
                                         String subject,
                                         String version,
                                         boolean verbose)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     RegisterSchemaRequest request = new RegisterSchemaRequest();
     request.setSchema(schemaString);
     request.setSchemaType(schemaType);
@@ -646,9 +696,9 @@ public class RestService implements Closeable, Configurable {
                                         String version,
                                         boolean normalize,
                                         boolean verbose)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return testCompatibility(DEFAULT_REQUEST_PROPERTIES, registerSchemaRequest,
-                             subject, version, normalize, verbose);
+            subject, version, normalize, verbose);
   }
 
   public List<String> testCompatibility(Map<String, String> requestProperties,
@@ -657,22 +707,22 @@ public class RestService implements Closeable, Configurable {
                                         String version,
                                         boolean normalize,
                                         boolean verbose)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path;
     if (version != null) {
       path = UriBuilder.fromPath("/compatibility/subjects/{subject}/versions/{version}")
-          .queryParam("normalize", normalize)
-          .queryParam("verbose", verbose)
-          .build(subject, version).toString();
+              .queryParam("normalize", normalize)
+              .queryParam("verbose", verbose)
+              .build(subject, version).toString();
     } else {
       path = UriBuilder.fromPath("/compatibility/subjects/{subject}/versions/")
-          .queryParam("normalize", normalize)
-          .queryParam("verbose", verbose)
-          .build(subject).toString();
+              .queryParam("normalize", normalize)
+              .queryParam("verbose", verbose)
+              .build(subject).toString();
     }
 
     CompatibilityCheckResponse response =
-        httpRequest(path, "POST",
+            httpRequest(path, "POST",
                     registerSchemaRequest.toJson().getBytes(StandardCharsets.UTF_8),
                     requestProperties, COMPATIBILITY_CHECK_RESPONSE_TYPE_REFERENCE);
     if (response.getIsCompatible()) {
@@ -685,7 +735,7 @@ public class RestService implements Closeable, Configurable {
   }
 
   public ConfigUpdateRequest updateCompatibility(String compatibility, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     ConfigUpdateRequest request = new ConfigUpdateRequest();
     request.setCompatibilityLevel(compatibility);
     return updateConfig(request, subject);
@@ -693,7 +743,7 @@ public class RestService implements Closeable, Configurable {
 
   public ConfigUpdateRequest updateConfig(ConfigUpdateRequest configUpdateRequest,
                                           String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return updateConfig(DEFAULT_REQUEST_PROPERTIES, configUpdateRequest, subject);
   }
 
@@ -703,69 +753,69 @@ public class RestService implements Closeable, Configurable {
   public ConfigUpdateRequest updateConfig(Map<String, String> requestProperties,
                                           ConfigUpdateRequest configUpdateRequest,
                                           String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path = subject != null
-                  ? UriBuilder.fromPath("/config/{subject}").build(subject).toString()
-                  : "/config";
+            ? UriBuilder.fromPath("/config/{subject}").build(subject).toString()
+            : "/config";
 
     ConfigUpdateRequest response =
-        httpRequest(path, "PUT", configUpdateRequest.toJson().getBytes(StandardCharsets.UTF_8),
+            httpRequest(path, "PUT", configUpdateRequest.toJson().getBytes(StandardCharsets.UTF_8),
                     requestProperties, UPDATE_CONFIG_RESPONSE_TYPE_REFERENCE);
     return response;
   }
 
   public Config getConfig(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getConfig(DEFAULT_REQUEST_PROPERTIES, subject, false);
   }
 
   public Config getConfig(Map<String, String> requestProperties,
                           String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getConfig(requestProperties, subject, false);
   }
 
   public Config getConfig(Map<String, String> requestProperties,
                           String subject,
                           boolean defaultToGlobal)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path = subject != null
-        ? UriBuilder.fromPath("/config/{subject}")
-        .queryParam("defaultToGlobal", defaultToGlobal).build(subject).toString()
-        : "/config";
+            ? UriBuilder.fromPath("/config/{subject}")
+            .queryParam("defaultToGlobal", defaultToGlobal).build(subject).toString()
+            : "/config";
 
     Config config =
-        httpRequest(path, "GET", null, requestProperties, GET_CONFIG_RESPONSE_TYPE);
+            httpRequest(path, "GET", null, requestProperties, GET_CONFIG_RESPONSE_TYPE);
     return config;
   }
 
   public Config deleteConfig(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return deleteConfig(DEFAULT_REQUEST_PROPERTIES, subject);
   }
 
   public Config deleteConfig(Map<String, String> requestProperties, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path = subject != null
-        ? UriBuilder.fromPath("/config/{subject}").build(subject).toString() : "/config";
+            ? UriBuilder.fromPath("/config/{subject}").build(subject).toString() : "/config";
 
     Config response = httpRequest(path, "DELETE", null, requestProperties,
-        DELETE_SUBJECT_CONFIG_RESPONSE_TYPE);
+            DELETE_SUBJECT_CONFIG_RESPONSE_TYPE);
     return response;
   }
 
   public ModeUpdateRequest setMode(String mode)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return setMode(mode, null);
   }
 
   public ModeUpdateRequest setMode(String mode, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return setMode(mode, subject, false);
   }
 
   public ModeUpdateRequest setMode(String mode, String subject, boolean force)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     ModeUpdateRequest request = new ModeUpdateRequest();
     request.setMode(mode);
     return setMode(DEFAULT_REQUEST_PROPERTIES, request, subject, force);
@@ -778,73 +828,73 @@ public class RestService implements Closeable, Configurable {
                                    ModeUpdateRequest modeUpdateRequest,
                                    String subject,
                                    boolean force)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path = subject != null
-        ? UriBuilder.fromPath("/mode/{subject}")
-        .queryParam("force", force).build(subject).toString()
-        : UriBuilder.fromPath("/mode")
+            ? UriBuilder.fromPath("/mode/{subject}")
+            .queryParam("force", force).build(subject).toString()
+            : UriBuilder.fromPath("/mode")
             .queryParam("force", force).build().toString();
 
     ModeUpdateRequest response =
-        httpRequest(path, "PUT", modeUpdateRequest.toJson().getBytes(StandardCharsets.UTF_8),
-            requestProperties, UPDATE_MODE_RESPONSE_TYPE_REFERENCE);
+            httpRequest(path, "PUT", modeUpdateRequest.toJson().getBytes(StandardCharsets.UTF_8),
+                    requestProperties, UPDATE_MODE_RESPONSE_TYPE_REFERENCE);
     return response;
   }
 
   public Mode getMode()
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getMode(null, false);
   }
 
   public Mode getMode(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getMode(subject, false);
   }
 
   public Mode getMode(String subject, boolean defaultToGlobal)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     String path = subject != null
-        ? UriBuilder.fromPath("/mode/{subject}")
-        .queryParam("defaultToGlobal", defaultToGlobal).build(subject).toString()
-        : "/mode";
+            ? UriBuilder.fromPath("/mode/{subject}")
+            .queryParam("defaultToGlobal", defaultToGlobal).build(subject).toString()
+            : "/mode";
 
     Mode mode =
-        httpRequest(path, "GET", null, DEFAULT_REQUEST_PROPERTIES, GET_MODE_RESPONSE_TYPE);
+            httpRequest(path, "GET", null, DEFAULT_REQUEST_PROPERTIES, GET_MODE_RESPONSE_TYPE);
     return mode;
   }
 
   public Mode deleteSubjectMode(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return deleteSubjectMode(DEFAULT_REQUEST_PROPERTIES, subject);
   }
 
   public Mode deleteSubjectMode(Map<String, String> requestProperties, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/mode/{subject}");
     String path = builder.build(subject).toString();
 
     Mode response = httpRequest(path, "DELETE", null, requestProperties,
-        DELETE_SUBJECT_MODE_RESPONSE_TYPE);
+            DELETE_SUBJECT_MODE_RESPONSE_TYPE);
     return response;
   }
 
   public List<Schema> getSchemas(
-      String subjectPrefix,
-      boolean lookupDeletedSchema,
-      boolean latestOnly)
-      throws IOException, RestClientException {
+          String subjectPrefix,
+          boolean lookupDeletedSchema,
+          boolean latestOnly)
+          throws IOException, RestClientException {
     return getSchemas(DEFAULT_REQUEST_PROPERTIES,
-        subjectPrefix, lookupDeletedSchema, latestOnly, null, null, null);
+            subjectPrefix, lookupDeletedSchema, latestOnly, null, null, null);
   }
 
   public List<Schema> getSchemas(Map<String, String> requestProperties,
-      String subjectPrefix,
-      boolean lookupDeletedSchema,
-      boolean latestOnly,
-      String ruleType,
-      Integer offset,
-      Integer limit)
-      throws IOException, RestClientException {
+                                 String subjectPrefix,
+                                 boolean lookupDeletedSchema,
+                                 boolean latestOnly,
+                                 String ruleType,
+                                 Integer offset,
+                                 Integer limit)
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/schemas");
     if (subjectPrefix != null) {
       builder.queryParam("subjectPrefix", subjectPrefix);
@@ -863,7 +913,7 @@ public class RestService implements Closeable, Configurable {
     String path = builder.build().toString();
 
     List<Schema> response = httpRequest(path, "GET", null, requestProperties,
-        GET_SCHEMAS_RESPONSE_TYPE);
+            GET_SCHEMAS_RESPONSE_TYPE);
     return response;
   }
 
@@ -872,7 +922,7 @@ public class RestService implements Closeable, Configurable {
   }
 
   public SchemaString getId(int id, boolean fetchMaxId)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getId(DEFAULT_REQUEST_PROPERTIES, id, null, fetchMaxId);
   }
 
@@ -881,7 +931,7 @@ public class RestService implements Closeable, Configurable {
   }
 
   public SchemaString getId(int id, String subject, boolean fetchMaxId)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getId(DEFAULT_REQUEST_PROPERTIES, id, subject, fetchMaxId);
   }
 
@@ -896,16 +946,17 @@ public class RestService implements Closeable, Configurable {
   }
 
   public SchemaString getId(Map<String, String> requestProperties,
-      int id, String subject, boolean fetchMaxId) throws IOException, RestClientException {
+                            int id, String subject, boolean fetchMaxId)
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/schemas/ids/{id}")
-        .queryParam("fetchMaxId", fetchMaxId);
+            .queryParam("fetchMaxId", fetchMaxId);
     if (subject != null) {
       builder.queryParam("subject", subject);
     }
     String path = builder.build(id).toString();
 
     SchemaString response = httpRequest(path, "GET", null, requestProperties,
-                                        GET_SCHEMA_BY_ID_RESPONSE_TYPE);
+            GET_SCHEMA_BY_ID_RESPONSE_TYPE);
     return response;
   }
 
@@ -931,12 +982,12 @@ public class RestService implements Closeable, Configurable {
   }
 
   public List<String> getSchemaTypes(Map<String, String> requestProperties)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/schemas/types");
     String path = builder.toString();
 
     List<String> response = httpRequest(path, "GET", null, requestProperties,
-        GET_SCHEMA_TYPES_TYPE);
+            GET_SCHEMA_TYPES_TYPE);
     return response;
   }
 
@@ -945,46 +996,46 @@ public class RestService implements Closeable, Configurable {
   }
 
   public Schema getVersion(String subject, int version, boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getVersion(DEFAULT_REQUEST_PROPERTIES, subject, version, lookupDeletedSchema);
   }
 
   public Schema getVersion(Map<String, String> requestProperties,
                            String subject, int version)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getVersion(requestProperties, subject, version, false);
   }
 
   public Schema getVersion(Map<String, String> requestProperties,
                            String subject, int version, boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/{version}")
-        .queryParam("deleted", lookupDeletedSchema);
+            .queryParam("deleted", lookupDeletedSchema);
     String path = builder.build(subject, version).toString();
 
     Schema response = httpRequest(path, "GET", null, requestProperties,
-                                  GET_SCHEMA_RESPONSE_TYPE);
+            GET_SCHEMA_RESPONSE_TYPE);
     return response;
   }
 
   public Schema getLatestVersion(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getLatestVersion(DEFAULT_REQUEST_PROPERTIES, subject);
   }
 
   public Schema getLatestVersion(Map<String, String> requestProperties,
                                  String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/latest");
     String path = builder.build(subject).toString();
 
     Schema response = httpRequest(path, "GET", null, requestProperties,
-                                  GET_SCHEMA_RESPONSE_TYPE);
+            GET_SCHEMA_RESPONSE_TYPE);
     return response;
   }
 
   public String getVersionSchemaOnly(String subject, int version)
-            throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/{version}/schema");
     String path = builder.build(subject, version).toString();
 
@@ -994,7 +1045,7 @@ public class RestService implements Closeable, Configurable {
   }
 
   public String getLatestVersionSchemaOnly(String subject)
-            throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/latest/schema");
     String path = builder.build(subject).toString();
 
@@ -1004,15 +1055,16 @@ public class RestService implements Closeable, Configurable {
   }
 
   public Schema getLatestWithMetadata(
-      String subject, Map<String, String> metadata, boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+          String subject, Map<String, String> metadata, boolean lookupDeletedSchema)
+          throws IOException, RestClientException {
     return getLatestWithMetadata(
-        DEFAULT_REQUEST_PROPERTIES, subject, metadata, lookupDeletedSchema);
+            DEFAULT_REQUEST_PROPERTIES, subject, metadata, lookupDeletedSchema);
   }
 
   public Schema getLatestWithMetadata(Map<String, String> requestProperties,
-      String subject, Map<String, String> metadata, boolean lookupDeletedSchema)
-      throws IOException, RestClientException {
+                                      String subject, Map<String, String> metadata,
+                                      boolean lookupDeletedSchema)
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/metadata");
     for (Map.Entry<String, String> entry : metadata.entrySet()) {
       builder.queryParam("key", entry.getKey());
@@ -1026,29 +1078,29 @@ public class RestService implements Closeable, Configurable {
   }
 
   public List<Integer> getReferencedBy(String subject, int version) throws IOException,
-      RestClientException {
+          RestClientException {
     return getReferencedBy(DEFAULT_REQUEST_PROPERTIES, subject, version);
   }
 
   public List<Integer> getReferencedBy(Map<String, String> requestProperties,
                                        String subject, int version)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/{version}/referencedby");
     String path = builder.build(subject, version).toString();
 
     List<Integer> response = httpRequest(path, "GET", null, requestProperties,
-        GET_REFERENCED_BY_RESPONSE_TYPE);
+            GET_REFERENCED_BY_RESPONSE_TYPE);
     return response;
   }
 
   public List<Integer> getAllVersions(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersions(DEFAULT_REQUEST_PROPERTIES, subject);
   }
 
   public List<Integer> getAllVersions(Map<String, String> requestProperties,
                                       String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersions(requestProperties, subject, false, false);
   }
 
@@ -1063,62 +1115,62 @@ public class RestService implements Closeable, Configurable {
                                       String subject,
                                       boolean lookupDeletedSchema,
                                       boolean lookupDeletedOnlySchema)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions");
     builder.queryParam("deleted", lookupDeletedSchema);
     builder.queryParam("deletedOnly", lookupDeletedOnlySchema);
     String path = builder.build(subject).toString();
 
     List<Integer> response = httpRequest(path, "GET", null, requestProperties,
-        ALL_VERSIONS_RESPONSE_TYPE);
+            ALL_VERSIONS_RESPONSE_TYPE);
     return response;
   }
 
   public List<Integer> getDeletedOnlyVersions(String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersions(DEFAULT_REQUEST_PROPERTIES, subject, false, true);
   }
 
   public List<String> getAllContexts()
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllContexts(DEFAULT_REQUEST_PROPERTIES);
   }
 
   public List<String> getAllContexts(Map<String, String> requestProperties)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/contexts");
     String path = builder.build().toString();
     List<String> response = httpRequest(path, "GET", null, requestProperties,
-        ALL_CONTEXTS_RESPONSE_TYPE);
+            ALL_CONTEXTS_RESPONSE_TYPE);
     return response;
   }
 
   public List<String> getAllSubjects()
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjects(DEFAULT_REQUEST_PROPERTIES);
   }
 
   public List<String> getAllSubjects(boolean deletedSubjects)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjects(DEFAULT_REQUEST_PROPERTIES, null, deletedSubjects);
   }
 
   public List<String> getAllSubjects(String subjectPrefix, boolean deletedSubjects)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjects(DEFAULT_REQUEST_PROPERTIES, subjectPrefix, deletedSubjects);
   }
 
   public List<String> getAllSubjects(Map<String, String> requestProperties)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     List<String> response = httpRequest("/subjects", "GET", null, requestProperties,
-                                        ALL_TOPICS_RESPONSE_TYPE);
+            ALL_TOPICS_RESPONSE_TYPE);
     return response;
   }
 
   public List<String> getAllSubjects(Map<String, String> requestProperties,
                                      String subjectPrefix,
                                      boolean deletedSubjects)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjects(requestProperties, subjectPrefix, deletedSubjects, false);
   }
 
@@ -1126,7 +1178,7 @@ public class RestService implements Closeable, Configurable {
                                      String subjectPrefix,
                                      boolean deletedSubjects,
                                      boolean deletedOnlySubjects)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects");
     builder.queryParam("deleted", deletedSubjects);
     builder.queryParam("deletedOnly", deletedOnlySubjects);
@@ -1135,40 +1187,40 @@ public class RestService implements Closeable, Configurable {
     }
     String path = builder.build().toString();
     List<String> response = httpRequest(path, "GET", null, requestProperties,
-        ALL_TOPICS_RESPONSE_TYPE);
+            ALL_TOPICS_RESPONSE_TYPE);
     return response;
   }
 
   public List<String> getDeletedOnlySubjects(String subjectPrefix)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjects(DEFAULT_REQUEST_PROPERTIES, subjectPrefix, false, true);
   }
 
   public List<String> getAllSubjectsById(int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjectsById(DEFAULT_REQUEST_PROPERTIES, id, null);
   }
 
   public List<String> getAllSubjectsById(int id, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjectsById(DEFAULT_REQUEST_PROPERTIES, id, subject);
   }
 
   public List<String> getAllSubjectsById(int id, String subject, boolean deleted)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjectsById(DEFAULT_REQUEST_PROPERTIES, id, subject, deleted);
   }
 
   public List<String> getAllSubjectsById(Map<String, String> requestProperties,
                                          int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjectsById(requestProperties, id, null, false);
   }
 
   public List<String> getAllSubjectsById(Map<String, String> requestProperties,
                                          int id,
                                          String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllSubjectsById(requestProperties, id, subject, false);
   }
 
@@ -1176,7 +1228,7 @@ public class RestService implements Closeable, Configurable {
                                          int id,
                                          String subject,
                                          boolean lookupDeleted)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/schemas/ids/{id}/subjects");
     builder.queryParam("deleted", lookupDeleted);
     if (subject != null) {
@@ -1185,36 +1237,36 @@ public class RestService implements Closeable, Configurable {
     String path = builder.build(id).toString();
 
     List<String> response = httpRequest(path, "GET", null, requestProperties,
-                                        ALL_TOPICS_RESPONSE_TYPE);
+            ALL_TOPICS_RESPONSE_TYPE);
 
     return response;
   }
 
   public List<SubjectVersion> getAllVersionsById(int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersionsById(DEFAULT_REQUEST_PROPERTIES, id, null);
   }
 
   public List<SubjectVersion> getAllVersionsById(int id, String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersionsById(DEFAULT_REQUEST_PROPERTIES, id, subject);
   }
 
   public List<SubjectVersion> getAllVersionsById(int id, String subject, boolean deleted)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersionsById(DEFAULT_REQUEST_PROPERTIES, id, subject, deleted);
   }
 
   public List<SubjectVersion> getAllVersionsById(Map<String, String> requestProperties,
                                                  int id)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersionsById(requestProperties, id, null, false);
   }
 
   public List<SubjectVersion> getAllVersionsById(Map<String, String> requestProperties,
                                                  int id,
                                                  String subject)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return getAllVersionsById(requestProperties, id, subject, false);
   }
 
@@ -1222,7 +1274,7 @@ public class RestService implements Closeable, Configurable {
                                                  int id,
                                                  String subject,
                                                  boolean lookupDeleted)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/schemas/ids/{id}/versions");
     builder.queryParam("deleted", lookupDeleted);
     if (subject != null) {
@@ -1231,22 +1283,22 @@ public class RestService implements Closeable, Configurable {
     String path = builder.build(id).toString();
 
     List<SubjectVersion> response = httpRequest(path, "GET", null, requestProperties,
-        GET_VERSIONS_RESPONSE_TYPE);
+            GET_VERSIONS_RESPONSE_TYPE);
 
     return response;
   }
 
   public Integer deleteSchemaVersion(
-      Map<String, String> requestProperties,
-      String subject,
-      String version
+          Map<String, String> requestProperties,
+          String subject,
+          String version
   ) throws IOException,
-                                                                            RestClientException {
+          RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}/versions/{version}");
     String path = builder.build(subject, version).toString();
 
     Integer response = httpRequest(path, "DELETE", null, requestProperties,
-                                   DELETE_SUBJECT_VERSION_RESPONSE_TYPE);
+            DELETE_SUBJECT_VERSION_RESPONSE_TYPE);
     return response;
   }
 
@@ -1267,15 +1319,15 @@ public class RestService implements Closeable, Configurable {
   }
 
   public List<Integer> deleteSubject(
-      Map<String, String> requestProperties,
-      String subject
+          Map<String, String> requestProperties,
+          String subject
   ) throws IOException,
-                                                            RestClientException {
+          RestClientException {
     UriBuilder builder = UriBuilder.fromPath("/subjects/{subject}");
     String path = builder.build(subject).toString();
 
     List<Integer> response = httpRequest(path, "DELETE", null, requestProperties,
-                                         DELETE_SUBJECT_RESPONSE_TYPE);
+            DELETE_SUBJECT_RESPONSE_TYPE);
     return response;
   }
 
@@ -1299,9 +1351,9 @@ public class RestService implements Closeable, Configurable {
   }
 
   public ServerClusterId getClusterId(Map<String, String> requestProperties)
-      throws IOException, RestClientException {
+          throws IOException, RestClientException {
     return httpRequest("/v1/metadata/id", "GET", null,
-                        requestProperties, GET_CLUSTER_ID_RESPONSE_TYPE);
+            requestProperties, GET_CLUSTER_ID_RESPONSE_TYPE);
   }
 
   public SchemaRegistryServerVersion getSchemaRegistryServerVersion()
@@ -1322,31 +1374,38 @@ public class RestService implements Closeable, Configurable {
     return baseUrls;
   }
 
-  private void setAuthRequestHeaders(HttpURLConnection connection) {
-    if (basicAuthCredentialProvider != null) {
-      String userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL());
-      if (userInfo != null) {
-        String authHeader = Base64.getEncoder().encodeToString(
-            userInfo.getBytes(StandardCharsets.UTF_8));
-        connection.setRequestProperty(AUTHORIZATION_HEADER, "Basic " + authHeader);
+  private void extractAuthCookieFromResponse(HttpURLConnection connection) {
+    final Optional<String> hadoopAuth =
+            Optional.ofNullable(connection.getHeaderField("Set-Cookie"));
+    hadoopAuth.ifPresent((value) -> {
+      if (value.startsWith("hadoop.auth")) {
+        authCookie = value;
       }
+    });
+  }
+
+  private void setAuthRequestHeaderOrCookie(HttpURLConnection connection) {
+    // Cookie authentication header
+    if (authCookie != null) {
+      connection.setRequestProperty("Cookie", authCookie);
+      return;
     }
 
-    if (bearerAuthCredentialProvider != null) {
-      String bearerToken = bearerAuthCredentialProvider.getBearerToken(connection.getURL());
-      if (bearerToken != null) {
-        connection.setRequestProperty(AUTHORIZATION_HEADER, "Bearer " + bearerToken);
-      }
+    // Basic authentication header
+    String userInfo;
+    if (basicAuthCredentialProvider != null
+            && (userInfo = basicAuthCredentialProvider.getUserInfo(connection.getURL())) != null) {
+      String authHeader = Base64.getEncoder().encodeToString(
+              userInfo.getBytes(StandardCharsets.UTF_8));
+      connection.setRequestProperty("Authorization", "Basic " + authHeader);
+      return;
+    }
 
-      String targetIdentityPoolId = bearerAuthCredentialProvider.getTargetIdentityPoolId();
-      if (targetIdentityPoolId != null) {
-        connection.setRequestProperty(TARGET_IDENTITY_POOL_ID, targetIdentityPoolId);
-      }
-
-      String targetSchemaRegistry = bearerAuthCredentialProvider.getTargetSchemaRegistry();
-      if (targetSchemaRegistry != null) {
-        connection.setRequestProperty(TARGET_SR_CLUSTER, targetSchemaRegistry);
-      }
+    // MapR Sasl authentication header
+    if (maprSaslAuth) {
+      String maprSaslChallengeString = readChallengeString();
+      connection.setRequestProperty("Authorization",
+              String.format("MAPR-Negotiate %s", maprSaslChallengeString));
     }
   }
 
@@ -1357,12 +1416,13 @@ public class RestService implements Closeable, Configurable {
   }
 
   public void setBasicAuthCredentialProvider(
-      BasicAuthCredentialProvider basicAuthCredentialProvider) {
+          BasicAuthCredentialProvider basicAuthCredentialProvider) {
     this.basicAuthCredentialProvider = basicAuthCredentialProvider;
   }
 
+
   public void setBearerAuthCredentialProvider(
-      BearerAuthCredentialProvider bearerAuthCredentialProvider) {
+          BearerAuthCredentialProvider bearerAuthCredentialProvider) {
     this.bearerAuthCredentialProvider = bearerAuthCredentialProvider;
   }
 

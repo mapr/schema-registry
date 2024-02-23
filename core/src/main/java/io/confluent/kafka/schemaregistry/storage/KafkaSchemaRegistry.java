@@ -26,10 +26,13 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
+import com.mapr.baseutils.cldbutils.CLDBRpcCommonUtils;
 import io.confluent.kafka.schemaregistry.CompatibilityLevel;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.ParsedSchemaHolder;
 import io.confluent.kafka.schemaregistry.SchemaProvider;
+import org.I0Itec.zkclient.ZkClient;
+
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
@@ -108,7 +111,6 @@ import java.util.stream.Stream;
 import javax.net.ssl.HostnameVerifier;
 import org.apache.avro.reflect.Nullable;
 import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.utils.Time;
 import org.slf4j.Logger;
@@ -342,7 +344,6 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   }
 
   protected IdGenerator identityGenerator(SchemaRegistryConfig config) {
-    config.checkBootstrapServers();
     IdGenerator idGenerator = new IncrementalIdGenerator(this);
     idGenerator.configure(config);
     return idGenerator;
@@ -409,9 +410,10 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
           "Error initializing metadata encoder while initializing schema registry", e);
     }
 
-    config.checkBootstrapServers();
     if (!delayLeaderElection) {
-      electLeader();
+//      Kafka group coordination for SR is not implemented in MapR SR, see KAFKA-1015
+//      Skipping any leader election logic and always treating ourselves as leader
+//      electLeader();
     }
   }
 
@@ -426,6 +428,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
     log.info("Joining schema registry with Kafka-based coordination");
     leaderElector = new KafkaGroupLeaderElector(config, myIdentity, this);
     try {
+      saveUrlInZk();
       leaderElector.init();
     } catch (SchemaRegistryStoreException e) {
       throw new SchemaRegistryInitializationException(
@@ -437,6 +440,26 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
 
   public void waitForInit() throws InterruptedException {
     kafkaStore.waitForInit();
+  }
+
+  private void saveUrlInZk() throws SchemaRegistryException {
+    final ZkClient zkClient =
+            new ZkClient(CLDBRpcCommonUtils.getInstance().getZkConnect()); //would it work?
+    if (!zkClient.exists(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR)) {
+      zkClient.createPersistent(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR);
+    }
+    final String path = String.format("%s/%s_%d",
+            SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR,
+            myIdentity.getHost(),
+            myIdentity.getPort());
+    if (zkClient.exists(path)) {
+      final String errMsg =
+              String.format("%s:%d Address already in use",
+                      myIdentity.getHost(),
+                      myIdentity.getPort());
+      throw new SchemaRegistryInitializationException(errMsg);
+    }
+    zkClient.createEphemeral(path, myIdentity.getUrl());
   }
 
   public boolean initialized() {
@@ -453,12 +476,15 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   }
 
   public boolean isLeader() {
-    kafkaStore.leaderLock().lock();
-    try {
-      return leaderIdentity != null && leaderIdentity.equals(myIdentity);
-    } finally {
-      kafkaStore.leaderLock().unlock();
-    }
+//      Kafka group coordination for SR is not implemented in MapR SR, see KAFKA-1015
+//      Skipping any leader election logic and always treating ourselves as leader
+    return true;
+//    kafkaStore.leaderLock().lock();
+//    try {
+//      return leaderIdentity != null && leaderIdentity.equals(myIdentity);
+//    } finally {
+//      kafkaStore.leaderLock().unlock();
+//    }
   }
 
   /**
@@ -1971,7 +1997,6 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   private String kafkaClusterId(SchemaRegistryConfig config) throws SchemaRegistryException {
     Properties adminClientProps = new Properties();
     KafkaStore.addSchemaRegistryConfigsToClientProperties(config, adminClientProps);
-    adminClientProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapBrokers());
 
     try (AdminClient adminClient = AdminClient.create(adminClientProps)) {
       return adminClient

@@ -16,12 +16,13 @@
 package io.confluent.kafka.schemaregistry.storage;
 
 import io.confluent.kafka.schemaregistry.storage.exceptions.EntryTooLargeException;
+import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
+import io.confluent.kafka.schemaregistry.util.UnixUserIdUtils;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -59,6 +60,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
   private static final Logger log = LoggerFactory.getLogger(KafkaStore.class);
 
+  private final String stream;
   private final String topic;
   private final int desiredReplicationFactor;
   private final String groupId;
@@ -71,7 +73,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
   private final int timeout;
   private final String bootstrapBrokers;
   private final boolean skipSchemaTopicValidation;
-  private KafkaProducer<byte[], byte[]> producer;
+  private ByteProducerPool producerPool;
   private KafkaStoreReaderThread<K, V> kafkaTopicReader;
   // Noop key is only used to help reliably determine last offset; reader thread ignores
   // messages with this key
@@ -86,7 +88,8 @@ public class KafkaStore<K, V> implements Store<K, V> {
                     Serializer<K, V> serializer,
                     Store<K, V> localStore,
                     K noopKey) throws SchemaRegistryException {
-    this.topic = config.getString(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG);
+    this.stream = config.getKafkaStoreStream();
+    this.topic = config.getKafkaStoreTopic();
     this.desiredReplicationFactor =
         config.getInt(SchemaRegistryConfig.KAFKASTORE_TOPIC_REPLICATION_FACTOR_CONFIG);
     this.config = config;
@@ -103,11 +106,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
     this.serializer = serializer;
     this.localStore = localStore;
     this.noopKey = noopKey;
-    this.bootstrapBrokers = config.bootstrapBrokers();
     this.skipSchemaTopicValidation =
         config.getBoolean(SchemaRegistryConfig.KAFKASTORE_TOPIC_SKIP_VALIDATION_CONFIG);
-
-    log.info("Initializing KafkaStore with broker endpoints: {}", this.bootstrapBrokers);
+    this.bootstrapBrokers = null;
   }
 
   @Override
@@ -123,7 +124,6 @@ public class KafkaStore<K, V> implements Store<K, V> {
     // set the producer properties and initialize a Kafka producer client
     Properties props = new Properties();
     addSchemaRegistryConfigsToClientProperties(this.config, props);
-    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
     props.put(ProducerConfig.ACKS_CONFIG, "-1");
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
               org.apache.kafka.common.serialization.ByteArraySerializer.class);
@@ -132,14 +132,15 @@ public class KafkaStore<K, V> implements Store<K, V> {
     props.put(ProducerConfig.RETRIES_CONFIG, 0); // Producer should not retry
     props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, false);
 
-    producer = new KafkaProducer<byte[], byte[]>(props);
+    producerPool = UnixUserIdUtils.configureProducerPool(props);
 
     // start the background thread that subscribes to the Kafka topic and applies updates.
     // the thread must be created after the schema topic has been created.
     this.kafkaTopicReader =
-        new KafkaStoreReaderThread<>(this.bootstrapBrokers, topic, groupId,
-                                     this.storeUpdateHandler, serializer, this.localStore,
-                                     this.producer, this.noopKey, this.initialized, this.config);
+            new KafkaStoreReaderThread<>(this.bootstrapBrokers, topic, groupId,
+                    this.storeUpdateHandler, serializer, this.localStore,
+                    this.producerPool, this.noopKey,
+                    this.initialized, this.config);
     this.kafkaTopicReader.start();
 
     try {
@@ -171,14 +172,13 @@ public class KafkaStore<K, V> implements Store<K, V> {
     }
 
     Properties props = new Properties();
-    addSchemaRegistryConfigsToClientProperties(this.config, props);
-    props.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokers);
+    props.setProperty(AdminClientConfig.STREAMS_ADMIN_DEFAULT_STREAM_CONFIG, stream);
 
     try (AdminClient admin = AdminClient.create(props)) {
       //
       Set<String> allTopics = admin.listTopics().names().get(initTimeout, TimeUnit.MILLISECONDS);
       if (allTopics.contains(topic)) {
-        verifySchemaTopic(admin);
+//        verifySchemaTopic(admin);
       } else {
         createSchemaTopic(admin);
       }
@@ -231,7 +231,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     } catch (ExecutionException e) {
       if (e.getCause() instanceof TopicExistsException) {
         // If topic already exists, ensure that it is configured correctly.
-        verifySchemaTopic(admin);
+        //verifySchemaTopic(admin);
       } else {
         throw e;
       }
@@ -251,8 +251,9 @@ public class KafkaStore<K, V> implements Store<K, V> {
     TopicDescription description = topicDescription.get(topic);
     final int numPartitions = description.partitions().size();
     if (numPartitions != 1) {
-      throw new StoreInitializationException("The schema topic " + topic + " should have only 1 "
-                                             + "partition but has " + numPartitions);
+      throw new StoreInitializationException(
+          "The schema topic " + topic + " should have only 1 "
+              + "partition but has " + numPartitions);
     }
 
     if (description.partitions().get(0).replicas().size() < desiredReplicationFactor) {
@@ -277,9 +278,10 @@ public class KafkaStore<K, V> implements Store<K, V> {
                 + "deleting your schemas after a week. "
                 + "Refer to Kafka documentation for more details on cleanup policies", topic);
 
-      throw new StoreInitializationException("The retention policy of the schema topic " + topic
-                                             + " is incorrect. Expected cleanup.policy to be "
-                                             + "'compact' but it is " + retentionPolicy);
+      throw new StoreInitializationException(
+          "The retention policy of the schema topic " + topic
+              + " is incorrect. Expected cleanup.policy to be "
+              + "'compact' but it is " + retentionPolicy);
 
     }
   }
@@ -334,12 +336,12 @@ public class KafkaStore<K, V> implements Store<K, V> {
     V oldValue = get(key);
 
     // write to the Kafka topic
-    ProducerRecord<byte[], byte[]> producerRecord = null;
+    ProducerRecord<byte[], byte[]> producerRecord;
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(topic, 0, this.serializer.serializeKey(key),
-                                             value == null ? null : this.serializer.serializeValue(
-                                                 value));
+          new ProducerRecord<>(topic, 0, this.serializer.serializeKey(key),
+              value == null ? null : this.serializer.serializeValue(
+                  value));
     } catch (SerializationException e) {
       throw new StoreException("Error serializing schema while creating the Kafka produce "
                                + "record", e);
@@ -348,7 +350,7 @@ public class KafkaStore<K, V> implements Store<K, V> {
     boolean knownSuccessfulWrite = false;
     try {
       log.trace("Sending record to KafkaStore topic: {}", producerRecord);
-      Future<RecordMetadata> ack = producer.send(producerRecord);
+      Future<RecordMetadata> ack = producerPool.send(producerRecord);
       RecordMetadata recordMetadata = ack.get(timeout, TimeUnit.MILLISECONDS);
 
       log.trace("Waiting for the local store to catch up to offset {}", recordMetadata.offset());
@@ -418,8 +420,8 @@ public class KafkaStore<K, V> implements Store<K, V> {
       if (kafkaTopicReader != null) {
         kafkaTopicReader.shutdown();
       }
-      if (producer != null) {
-        producer.close();
+      if (producerPool != null) {
+        producerPool.close();
         log.info("Kafka store producer shut down");
       }
       localStore.close();
@@ -474,14 +476,14 @@ public class KafkaStore<K, V> implements Store<K, V> {
 
     try {
       producerRecord =
-          new ProducerRecord<byte[], byte[]>(topic, 0, this.serializer.serializeKey(noopKey), null);
+          new ProducerRecord<>(topic, 0, this.serializer.serializeKey(noopKey), null);
     } catch (SerializationException e) {
       throw new StoreException("Failed to serialize noop key.", e);
     }
 
     try {
       log.trace("Sending Noop record to KafkaStore to find last offset.");
-      Future<RecordMetadata> ack = producer.send(producerRecord);
+      Future<RecordMetadata> ack = producerPool.send(producerRecord);
       RecordMetadata metadata = ack.get(timeoutMs, TimeUnit.MILLISECONDS);
       this.lastWrittenOffset = metadata.offset();
       log.trace("Noop record's offset is {}", this.lastWrittenOffset);

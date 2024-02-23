@@ -1,0 +1,32 @@
+#!/bin/sh
+set -e
+
+#remove old schema-registry conf and links
+if [ -f __PREFIX__/conf/conf.d/warden.schemaregistry.conf ]; then
+    rm -Rf __PREFIX__/conf/conf.d/warden.schemaregistry.conf
+fi
+
+if [ -h __PREFIX__/pid/schemaregistry.pid ]; then
+    rm -f __PREFIX__/pid/schemaregistry.pid
+fi
+
+case "$1" in
+    configure)
+        # Install config alternatives
+
+        mkdir -p "__INSTALL_3DIGIT__"/etc/schema-registry/
+        if [ -z "$2" ]; then
+            touch "__INSTALL_3DIGIT__/etc/schema-registry/.not_configured_yet"
+        fi 
+    
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+

@@ -15,6 +15,22 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.HttpHeaders;
+
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.ErrorMessage;
 import io.confluent.kafka.schemaregistry.client.rest.entities.Schema;
@@ -34,16 +50,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
 import java.util.function.Predicate;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.PathParam;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -144,6 +150,7 @@ public class SchemasResource {
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @PerformanceMetric("schemas.ids.get-schema")
+  @RequirePermission(Permission.READ)
   public SchemaString getSchema(
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
@@ -152,7 +159,14 @@ public class SchemasResource {
       @Parameter(description = "Desired output format, dependent on schema type")
       @DefaultValue("") @QueryParam("format") String format,
       @Parameter(description = "Whether to fetch the maximum schema identifier that exists")
-      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId) {
+      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchema(id, subject, format, fetchMaxId), auth, cookie);
+  }
+
+  private SchemaString getSchema(Integer id, String subject, String format, boolean fetchMaxId) {
     SchemaString schema;
     String errorMessage = "Error while retrieving schema with id " + id + " from the schema "
                           + "registry";
@@ -191,13 +205,21 @@ public class SchemasResource {
             content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                     ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public Set<String> getSubjects(
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @Parameter(description = "Filters results by the respective subject")
       @QueryParam("subject") String subject,
       @Parameter(description = "Whether to include subjects where the schema was deleted")
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSubjects(id, subject, lookupDeletedSchema), auth, cookie);
+  }
+
+  private Set<String> getSubjects(Integer id, String subject, boolean lookupDeletedSchema) {
     Set<String> subjects;
     String errorMessage = "Error while retrieving all subjects associated with schema id "
         + id + " from the schema registry";
@@ -239,13 +261,22 @@ public class SchemasResource {
           content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public List<SubjectVersion> getVersions(
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @Parameter(description = "Filters results by the respective subject")
       @QueryParam("subject") String subject,
       @Parameter(description = "Whether to include subject versions where the schema was deleted")
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getVersions(id, subject, lookupDeletedSchema), auth, cookie);
+  }
+
+  private List<SubjectVersion> getVersions(Integer id, String subject,
+                                           boolean lookupDeletedSchema) {
     List<SubjectVersion> versions;
     String errorMessage = "Error while retrieving all subjects associated with schema id "
                           + id + " from the schema registry";
@@ -327,7 +358,14 @@ public class SchemasResource {
           content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
-  public Set<String> getSchemaTypes() {
+  @RequirePermission(Permission.READ)
+  public Set<String> getSchemaTypes(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                    @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaTypes(), auth, cookie);
+  }
+
+  private Set<String> getSchemaTypes() {
     return schemaRegistry.schemaTypes();
   }
 }

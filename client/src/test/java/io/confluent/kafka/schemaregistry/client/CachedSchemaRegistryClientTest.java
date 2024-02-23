@@ -18,6 +18,8 @@ package io.confluent.kafka.schemaregistry.client;
 import com.google.common.testing.FakeTicker;
 import io.confluent.kafka.schemaregistry.client.rest.entities.requests.RegisterSchemaRequest;
 import io.confluent.kafka.schemaregistry.client.rest.entities.requests.RegisterSchemaResponse;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -41,6 +43,14 @@ import io.confluent.kafka.schemaregistry.client.rest.entities.Mode;
 import io.confluent.kafka.schemaregistry.client.rest.entities.requests.ModeUpdateRequest;
 import io.confluent.kafka.schemaregistry.client.rest.RestService;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
+
+import javax.net.ssl.SSLContext;
 
 import static org.easymock.EasyMock.anyBoolean;
 import static org.easymock.EasyMock.anyObject;
@@ -49,6 +59,7 @@ import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.mock;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
@@ -56,6 +67,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
+@PowerMockIgnore({"javax.management.*", "javax.xml.*", "org.apache.xerces.*", "org.w3c.*", "javax.security.*", "javax.net.ssl.*"})
+@PrepareForTest(UserGroupInformation.class)
+@RunWith(PowerMockRunner.class)
+@SuppressStaticInitializationFor("com.mapr.baseutils.JVMProperties")
 public class CachedSchemaRegistryClientTest {
 
   private static final int CACHE_CAPACITY = 5;
@@ -111,13 +126,16 @@ public class CachedSchemaRegistryClientTest {
           SUBJECT_0, 7, ID_25, AvroSchema.TYPE, Collections.emptyList(), SCHEMA_STR_0);
 
   private RestService restService;
-  private CachedSchemaRegistryClient client;
 
   @Before
   public void setUp() {
     restService = createNiceMock(RestService.class);
+    PowerMock.mockStaticPartial(UserGroupInformation.class, "getLoginUser", "isSecurityEnabled");
+    EasyMock.expect(UserGroupInformation.isSecurityEnabled()).andReturn(false).anyTimes();
+  }
 
-    client = new CachedSchemaRegistryClient(restService, CACHE_CAPACITY, new HashMap<>());
+  private CachedSchemaRegistryClient createSchemaRegistryClient() {
+    return new CachedSchemaRegistryClient(restService, CACHE_CAPACITY, new HashMap<>());
   }
 
   @Test
@@ -169,6 +187,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+    
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
 
@@ -185,6 +205,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0, VERSION_1, ID_25));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0, VERSION_1, ID_25)); // hit the cache
 
@@ -193,6 +215,8 @@ public class CachedSchemaRegistryClientTest {
 
   @Test
   public void testRegisterEquivalentSchemaDifferentid() throws Exception {
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     expect(restService.registerSchema(anyObject(RegisterSchemaRequest.class),
         eq(SUBJECT_0), anyBoolean()))
         .andReturn(new RegisterSchemaResponse(ID_25))
@@ -223,6 +247,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     for (int i = 0; i != CACHE_CAPACITY; ++i) {
       client.register(SUBJECT_0, avroSchema(i));  // Each one results in new id.
     }
@@ -245,6 +271,8 @@ public class CachedSchemaRegistryClientTest {
         .andReturn(new SchemaString(SCHEMA_STR_0));
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(
@@ -277,6 +305,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
@@ -305,6 +335,8 @@ public class CachedSchemaRegistryClientTest {
             .andReturn(schemaStringTwo);
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     // Make sure they still get the same ID
     assertEquals(ID_25, client.register(subjectOne, AVRO_SCHEMA_0));
@@ -346,6 +378,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
 
@@ -380,6 +414,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(ID_25, client.register(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0));
     assertEquals(version, client.getVersion(SUBJECT_0, AVRO_SCHEMA_0)); // hit the cache
@@ -405,6 +441,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(mode, client.setMode(mode));
 
     verify(restService);
@@ -421,16 +459,20 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     assertEquals(mode, client.getMode());
 
     verify(restService);
   }
 
   public void testDeleteVersionNotInVersionCache() throws Exception {
-    expect(client.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0"))
+    expect(restService.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0"))
         .andReturn(10);
 
     replay(restService);
+
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     final Integer result = client.deleteSchemaVersion(Collections.emptyMap(), SUBJECT_0, "0");
 
@@ -440,11 +482,15 @@ public class CachedSchemaRegistryClientTest {
 
   @Test(expected = NullPointerException.class)
   public void testDeleteNullSubjectThrows() throws Exception {
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+    
     client.deleteSubject(null);
   }
 
   @Test(expected = NullPointerException.class)
   public void testDeleteNullSubjectThrowsPermanent() throws Exception {
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     client.deleteSubject(null, true);
   }
 
@@ -465,6 +511,8 @@ public class CachedSchemaRegistryClientTest {
         .anyTimes();
 
     replay(restService);
+    
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
 
     IntStream.range(0, 1_000)
         .parallel()
@@ -526,6 +574,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     for (int i = 0; i != CACHE_CAPACITY; ++i) {
       client.register(SUBJECT_0, avroSchema(i));  // Each one results in new id.
     }
@@ -545,6 +595,8 @@ public class CachedSchemaRegistryClientTest {
 
     replay(restService);
 
+    CachedSchemaRegistryClient client = createSchemaRegistryClient();
+
     List<ParsedSchema> parsedSchemas = client.getSchemas(SUBJECT_0, false, true);
     assertEquals(0, parsedSchemas.size());
   }
@@ -556,6 +608,8 @@ public class CachedSchemaRegistryClientTest {
     configs.put(SchemaRegistryClientConfig.MISSING_SCHEMA_CACHE_TTL_CONFIG, 60L);
 
     FakeTicker fakeTicker = new FakeTicker();
+    CachedSchemaRegistryClient client;
+
     client = new CachedSchemaRegistryClient(
         restService,
         CACHE_CAPACITY,
@@ -600,6 +654,8 @@ public class CachedSchemaRegistryClientTest {
     configs.put(SchemaRegistryClientConfig.MISSING_SCHEMA_CACHE_TTL_CONFIG, 60L);
 
     FakeTicker fakeTicker = new FakeTicker();
+    CachedSchemaRegistryClient client;
+
     client = new CachedSchemaRegistryClient(
             restService,
             CACHE_CAPACITY,
@@ -649,6 +705,8 @@ public class CachedSchemaRegistryClientTest {
     configs.put(SchemaRegistryClientConfig.MISSING_SCHEMA_CACHE_TTL_CONFIG, 60L);
 
     FakeTicker fakeTicker = new FakeTicker();
+    CachedSchemaRegistryClient client;
+
     client = new CachedSchemaRegistryClient(
         restService,
         CACHE_CAPACITY,
@@ -700,4 +758,5 @@ public class CachedSchemaRegistryClientTest {
     return "{\"type\": \"record\", \"name\": \"Blah" + i + "\", "
         + "\"fields\": [{ \"name\": \"name\", \"type\": \"string\" }]}";
   }
+
 }

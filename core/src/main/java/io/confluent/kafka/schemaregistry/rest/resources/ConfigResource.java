@@ -38,6 +38,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +52,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
@@ -75,7 +79,7 @@ public class ConfigResource {
     this.schemaRegistry = schemaRegistry;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @PUT
   @DocumentedName("updateSubjectConfig")
   @Operation(summary = "Update subject compatibility level",
@@ -97,15 +101,22 @@ public class ConfigResource {
                     + "Error code 50003 indicates a failure forwarding the request to the primary.",
             content = @Content(schema = @Schema(implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateSubjectLevelConfig(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Context HttpHeaders headers,
       @Parameter(description = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request) {
+      @NotNull ConfigUpdateRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> updateSubjectLevelConfig(subject, headers, request), auth, cookie);
+  }
 
+  private ConfigUpdateRequest updateSubjectLevelConfig(String subject, HttpHeaders headers,
+                                                       ConfigUpdateRequest request) {
     schemaRegistry.getCompositeUpdateRequestHandler().handle(subject, request);
-
     CompatibilityLevel compatibilityLevel =
         CompatibilityLevel.forName(request.getCompatibilityLevel());
     if (request.getCompatibilityLevel() != null && compatibilityLevel == null) {
@@ -149,7 +160,7 @@ public class ConfigResource {
     return request;
   }
 
-  @Path("/{subject}")
+  @Path("/{subject: .+}")
   @GET
   @DocumentedName("getSubjectConfig")
   @Operation(summary = "Get subject compatibility level",
@@ -165,14 +176,21 @@ public class ConfigResource {
                     + "Error code 50001 indicates a failure in the backend data store.",
             content = @Content(schema = @Schema(implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public Config getSubjectLevelConfig(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description =
           "Whether to return the global compatibility level "
               + " if subject compatibility level not found")
-      @QueryParam("defaultToGlobal") boolean defaultToGlobal) {
+      @QueryParam("defaultToGlobal") boolean defaultToGlobal,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+            getSubjectLevelConfig(subject, defaultToGlobal), auth, cookie);
+  }
 
+  private Config getSubjectLevelConfig(String subject, boolean defaultToGlobal) {
     subject = QualifiedSubject.normalize(schemaRegistry.tenant(), subject);
 
     Config config;
@@ -209,13 +227,21 @@ public class ConfigResource {
                   + "Error code 50003 indicates a failure forwarding the request to the primary.",
           content = @Content(schema = @Schema(implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateTopLevelConfig(
       @Context HttpHeaders headers,
       @Parameter(description = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request) {
+      @NotNull ConfigUpdateRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
+            updateTopLevelConfig(headers, request), auth, cookie);
+  }
+
+  private ConfigUpdateRequest updateTopLevelConfig(HttpHeaders headers,
+                                                   ConfigUpdateRequest request) {
 
     schemaRegistry.getCompositeUpdateRequestHandler().handle(request);
-
     CompatibilityLevel compatibilityLevel =
         CompatibilityLevel.forName(request.getCompatibilityLevel());
     if (request.getCompatibilityLevel() != null && compatibilityLevel == null) {
@@ -264,7 +290,14 @@ public class ConfigResource {
                   + "Error code 50001 indicates a failure in the backend data store.",
           content = @Content(schema = @Schema(implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
-  public Config getTopLevelConfig() {
+  @RequirePermission(Permission.READ)
+  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+                                  @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+            this::getTopLevelConfig, auth, cookie);
+  }
+
+  private Config getTopLevelConfig() {
     Config config;
     try {
       config = schemaRegistry.getConfig(null);

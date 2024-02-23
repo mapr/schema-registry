@@ -49,7 +49,7 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
  * streamsConfiguration.put(StreamsConfig.VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
  * streamsConfiguration.put(
  *     AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
- *     "http://confluent-schema-registry-server:8081/");
+ *     "http://confluent-schema-registry-server:8087/");
  * }</pre>
  * </p>
  *
@@ -63,7 +63,7 @@ import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
  * specificAvroSerde.configure(
  *     Collections.singletonMap(
  *         AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
- *         "http://confluent-schema-registry-server:8081/"),
+ *         "http://confluent-schema-registry-server:8087/"),
  *     isKeySerde);
  * KStream<String, MyJavaClassGeneratedFromAvroSchema> stream = ...;
  * stream.to(Serdes.String(), specificAvroSerde, "my-output-topic");

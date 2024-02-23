@@ -30,6 +30,10 @@ import javax.ws.rs.Produces;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+
+
 
 @Path("/")
 @Produces(
@@ -37,6 +41,7 @@ import java.util.Map;
      Versions.JSON_WEIGHTED})
 @Consumes({Versions.SCHEMA_REGISTRY_V1_JSON, Versions.SCHEMA_REGISTRY_DEFAULT_JSON,
            Versions.JSON, Versions.GENERIC_REQUEST})
+@RequirePermission(Permission.NONE)
 public class RootResource {
 
   @GET

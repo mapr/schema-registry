@@ -19,6 +19,12 @@ package io.confluent.kafka.schemaregistry.client.security;
 import static org.apache.kafka.common.security.ssl.DefaultSslEngineFactory.PEM_TYPE;
 
 import java.io.ByteArrayInputStream;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import com.mapr.web.security.SslConfig;
+import com.mapr.web.security.WebSecurityManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -47,10 +53,6 @@ import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.SslConfigs;
 import org.apache.kafka.common.config.types.Password;
@@ -58,6 +60,7 @@ import org.apache.kafka.common.errors.InvalidConfigurationException;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class SslFactory {
 
@@ -90,27 +93,27 @@ public class SslFactory {
     this.provider = (String) configs.get(SslConfigs.SSL_PROVIDER_CONFIG);
 
     this.kmfAlgorithm = (String) configs.get(
-        SslConfigs.SSL_KEYMANAGER_ALGORITHM_CONFIG);
+            SslConfigs.SSL_KEYMANAGER_ALGORITHM_CONFIG);
     this.tmfAlgorithm = (String) configs.get(
-        SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG);
+            SslConfigs.SSL_TRUSTMANAGER_ALGORITHM_CONFIG);
 
     this.secureRandomImplementation = createSecureRandom((String)
-        configs.get(SslConfigs.SSL_SECURE_RANDOM_IMPLEMENTATION_CONFIG));
+            configs.get(SslConfigs.SSL_SECURE_RANDOM_IMPLEMENTATION_CONFIG));
 
     try {
       this.keystore = createKeystore(
-          keystoreType,
-          (String) configs.get(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG),
-          passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG)),
-          passwordOf(configs.get(SslConfigs.SSL_KEY_PASSWORD_CONFIG)),
-          passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_KEY_CONFIG)),
-          passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_CERTIFICATE_CHAIN_CONFIG)));
+              keystoreType,
+              (String) configs.get(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG),
+              passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG)),
+              passwordOf(configs.get(SslConfigs.SSL_KEY_PASSWORD_CONFIG)),
+              passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_KEY_CONFIG)),
+              passwordOf(configs.get(SslConfigs.SSL_KEYSTORE_CERTIFICATE_CHAIN_CONFIG)));
 
       this.truststore = createTruststore(
-          truststoreType,
-          (String) configs.get(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG),
-          passwordOf(configs.get(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG)),
-          passwordOf(configs.get(SslConfigs.SSL_TRUSTSTORE_CERTIFICATES_CONFIG)));
+              truststoreType,
+              (String) configs.get(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG),
+              passwordOf(configs.get(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG)),
+              passwordOf(configs.get(SslConfigs.SSL_TRUSTSTORE_CERTIFICATES_CONFIG)));
 
       this.sslContext = createSslContext(keystore, truststore);
     } catch (Exception e) {
@@ -139,18 +142,27 @@ public class SslFactory {
 
   private static SecurityStore createTruststore(String type, String path, Password password,
                                                 Password trustStoreCerts) {
+    boolean secureCluster = UserGroupInformation.isSecurityEnabled();
+    if (secureCluster && (path == null || path.isEmpty())) {
+      try (SslConfig sslConfig = WebSecurityManager
+              .getSslConfig(SslConfig.SslConfigScope.SCOPE_CLIENT_ONLY)) {
+        type = sslConfig.getClientTruststoreType();
+        path = sslConfig.getClientTruststoreLocation();
+        password = new Password(new String(sslConfig.getClientTruststorePassword()));
+      }
+    }
     if (trustStoreCerts != null) {
       return createPemTrustStore(type, path, password, trustStoreCerts);
     } else if (PEM_TYPE.equals(type) && isNotEmpty(path)) {
       if (password != null) {
         throw new InvalidConfigurationException(
-            "SSL trust store password cannot be specified for PEM format.");
+                "SSL trust store password cannot be specified for PEM format.");
       } else {
         return new FileBasedPemStore(path, null, false);
       }
     } else if (path == null && password != null) {
       throw new InvalidConfigurationException(
-          "SSL trust store is not specified, but trust store password is specified.");
+              "SSL trust store is not specified, but trust store password is specified.");
     } else if (isNotEmpty(path)) {
       return new FileBasedStore(type, path, password, null, false);
     } else {
@@ -162,14 +174,14 @@ public class SslFactory {
                                                    Password trustStoreCerts) {
     if (!PEM_TYPE.equals(type)) {
       throw new InvalidConfigurationException(
-          "SSL trust store certs can be specified only for PEM, but trust store type is "
-              + type + ".");
+              "SSL trust store certs can be specified only for PEM, but trust store type is "
+                      + type + ".");
     } else if (isNotEmpty(path)) {
       throw new InvalidConfigurationException(
-          "Both SSL trust store location and separate trust certificates are specified.");
+              "Both SSL trust store location and separate trust certificates are specified.");
     } else if (password != null) {
       throw new InvalidConfigurationException(
-          "SSL trust store password cannot be specified for PEM format.");
+              "SSL trust store password cannot be specified for PEM format.");
     } else {
       return new PemStore(trustStoreCerts);
     }
@@ -219,14 +231,14 @@ public class SslFactory {
       }
 
       String tmfAlgorithm = isNotEmpty(this.tmfAlgorithm) ? this.tmfAlgorithm :
-          TrustManagerFactory.getDefaultAlgorithm();
+              TrustManagerFactory.getDefaultAlgorithm();
       TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
       KeyStore ts = truststore == null ? null : truststore.get();
       tmf.init(ts);
 
       sslContext.init(keyManagers, tmf.getTrustManagers(), this.secureRandomImplementation);
       log.debug("Created SSL context with keystore {}, truststore {}, provider {}.",
-          keystore, truststore, sslContext.getProvider().getName());
+              keystore, truststore, sslContext.getProvider().getName());
       return sslContext;
     } catch (Exception e) {
       throw new KafkaException(e);
@@ -250,16 +262,16 @@ public class SslFactory {
       return createPemKeyStore(type, path, password, keyPassword, privateKey, certificateChain);
     } else if (certificateChain != null) {
       throw new InvalidConfigurationException(
-          "SSL certificate chain is specified, but private key is not specified");
+              "SSL certificate chain is specified, but private key is not specified");
     } else if (PEM_TYPE.equals(type) && path != null) {
       return createFileBasedPemStore(path, password, keyPassword);
     } else if (path == null && password != null) {
       throw new InvalidConfigurationException(
-          "SSL key store is not specified, but key store password is specified.");
+              "SSL key store is not specified, but key store password is specified.");
     } else if (isNotEmpty(path)) {
       if (password == null) {
         throw new InvalidConfigurationException(
-            "SSL key store is specified, but key store password is not specified.");
+                "SSL key store is specified, but key store password is not specified.");
       }
       return new FileBasedStore(type, path, password, keyPassword, true);
     } else {
@@ -269,21 +281,21 @@ public class SslFactory {
   }
 
   private static SecurityStore createPemKeyStore(String type, String path, Password password,
-                                        Password keyPassword, Password privateKey,
-                                        Password certificateChain) {
+                                                 Password keyPassword, Password privateKey,
+                                                 Password certificateChain) {
     if (!PEM_TYPE.equals(type)) {
       throw new InvalidConfigurationException("SSL private key can be specified only for "
-          + "PEM, but key store type is " + type + ".");
+              + "PEM, but key store type is " + type + ".");
     } else if (certificateChain == null) {
       throw new InvalidConfigurationException("SSL private key is specified, "
-          + "but certificate chain is not specified.");
+              + "but certificate chain is not specified.");
     } else if (path != null) {
       throw new InvalidConfigurationException("Both SSL key store location and separate "
-          + "private key are specified.");
+              + "private key are specified.");
     } else if (password != null) {
       throw new InvalidConfigurationException(
-          "SSL key store password cannot be specified with PEM format, "
-              + "only key password may be specified.");
+              "SSL key store password cannot be specified with PEM format, "
+                      + "only key password may be specified.");
     }
     return new PemStore(certificateChain, privateKey, keyPassword);
   }
@@ -292,8 +304,8 @@ public class SslFactory {
                                                        Password keyPassword) {
     if (password != null) {
       throw new InvalidConfigurationException(
-          "SSL key store password cannot be specified with PEM format, "
-              + "only key password may be specified");
+              "SSL key store password cannot be specified with PEM format, "
+                      + "only key password may be specified");
     } else {
       return new FileBasedPemStore(path, keyPassword, true);
     }
@@ -376,7 +388,7 @@ public class SslFactory {
     @Override
     public String toString() {
       return "SecurityStore(" + "path=" + path + ", modificationTime="
-          + (fileLastModifiedMs == null ? null : new Date(fileLastModifiedMs)) + ")";
+              + (fileLastModifiedMs == null ? null : new Date(fileLastModifiedMs)) + ")";
     }
   }
 
@@ -390,7 +402,7 @@ public class SslFactory {
       try {
         Password storeContents = new Password(Utils.readFileAsString(path));
         PemStore pemStore = isKeyStore ? new PemStore(storeContents, storeContents, keyPassword) :
-            new PemStore(storeContents);
+                new PemStore(storeContents);
         return pemStore.keyStore;
       } catch (Exception e) {
         throw new InvalidConfigurationException("Failed to load PEM SSL keystore " + path, e);
@@ -402,9 +414,9 @@ public class SslFactory {
     private static final PemParser CERTIFICATE_PARSER = new PemParser("CERTIFICATE");
     private static final PemParser PRIVATE_KEY_PARSER = new PemParser("PRIVATE KEY");
     private static final List<KeyFactory> KEY_FACTORIES = Arrays.asList(
-        keyFactory("RSA"),
-        keyFactory("DSA"),
-        keyFactory("EC")
+            keyFactory("RSA"),
+            keyFactory("DSA"),
+            keyFactory("EC")
     );
 
     private final char[] keyPassword;
@@ -413,7 +425,7 @@ public class SslFactory {
     PemStore(Password certificateChain, Password privateKey, Password keyPassword) {
       this.keyPassword = keyPassword == null ? null : keyPassword.value().toCharArray();
       keyStore =
-          createKeyStoreFromPem(privateKey.value(), certificateChain.value(), this.keyPassword);
+              createKeyStoreFromPem(privateKey.value(), certificateChain.value(), this.keyPassword);
     }
 
     PemStore(Password trustStoreCerts) {
@@ -426,7 +438,7 @@ public class SslFactory {
         return KeyFactory.getInstance(algorithm);
       } catch (Exception e) {
         throw new InvalidConfigurationException(
-            "Could not create key factory for algorithm " + algorithm, e);
+                "Could not create key factory for algorithm " + algorithm, e);
       }
     }
 
@@ -479,13 +491,13 @@ public class SslFactory {
       List<byte[]> certEntries = CERTIFICATE_PARSER.pemEntries(pem);
       if (certEntries.isEmpty()) {
         throw new InvalidConfigurationException(
-            "At least one certificate expected, but none found");
+                "At least one certificate expected, but none found");
       }
 
       Certificate[] certs = new Certificate[certEntries.size()];
       for (int i = 0; i < certs.length; i++) {
         certs[i] = CertificateFactory.getInstance("X.509")
-            .generateCertificate(new ByteArrayInputStream(certEntries.get(i)));
+                .generateCertificate(new ByteArrayInputStream(certEntries.get(i)));
       }
       return certs;
     }
@@ -497,7 +509,7 @@ public class SslFactory {
       }
       if (keyEntries.size() != 1) {
         throw new InvalidConfigurationException(
-            "Expected one private key, but found " + keyEntries.size());
+                "Expected one private key, but found " + keyEntries.size());
       }
 
       byte[] keyBytes = keyEntries.get(0);
@@ -552,8 +564,8 @@ public class SslFactory {
       String encodingParams = "\\s*[^\\r\\n]*:[^\\r\\n]*[\\r\\n]+";
       String base64Pattern = "([a-zA-Z0-9/+=\\s]*)";
       String patternStr = String.format(beginOrEndFormat, "BEGIN", nameIgnoreSpace)
-          + String.format("(?:%s)*", encodingParams)
-          + base64Pattern + String.format(beginOrEndFormat, "END", nameIgnoreSpace);
+              + String.format("(?:%s)*", encodingParams)
+              + base64Pattern + String.format(beginOrEndFormat, "END", nameIgnoreSpace);
       pattern = Pattern.compile(patternStr);
     }
 

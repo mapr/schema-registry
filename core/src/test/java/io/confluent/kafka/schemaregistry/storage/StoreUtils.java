@@ -105,7 +105,6 @@ public class StoreUtils {
           Properties props)
       throws RestConfigException, StoreInitializationException, SchemaRegistryException {
     props.put(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-    props.put(SchemaRegistryConfig.KAFKASTORE_TOPIC_CONFIG, ClusterTestHarness.KAFKASTORE_TOPIC);
 
     SchemaRegistryConfig config = null;
     config = new SchemaRegistryConfig(props);

@@ -14,19 +14,35 @@
  */
 package io.confluent.kafka.schemaregistry.storage;
 
+import io.confluent.kafka.schemaregistry.util.MaprFSUtils;
 import io.confluent.rest.NamedURI;
 import io.confluent.rest.RestConfig;
 import io.confluent.rest.RestConfigException;
+import org.easymock.EasyMock;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Properties;
 
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryException;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.junit.Assert.assertEquals;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(MaprFSUtils.class)
 public class KafkaSchemaRegistryTest {
+
+  @Before
+  public void setUp() {
+    PowerMock.mockStatic(MaprFSUtils.class);
+    EasyMock.expect(MaprFSUtils.getZKQuorum()).andReturn("none:8888");
+    PowerMock.replay(MaprFSUtils.class);
+  }
 
   @Test
   public void testGetPortForIdentityPrecedence() throws SchemaRegistryException, RestConfigException {

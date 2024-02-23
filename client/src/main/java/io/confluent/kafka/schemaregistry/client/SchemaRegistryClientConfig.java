@@ -38,6 +38,8 @@ public class SchemaRegistryClientConfig {
   public static final String HTTP_READ_TIMEOUT_MS = "http.read.timeout.ms";
   public static final int HTTP_READ_TIMEOUT_MS_DEFAULT = 60000;
 
+  public static final String MAPRSASL_AUTH_CONFIG = "maprsasl.auth";
+
   public static final String BEARER_AUTH_CREDENTIALS_SOURCE = "bearer.auth.credentials.source";
   public static final String BEARER_AUTH_TOKEN_CONFIG = "bearer.auth.token";
 

@@ -15,6 +15,33 @@
 
 package io.confluent.kafka.schemaregistry.rest.resources;
 
+import io.confluent.kafka.schemaregistry.filter.RequirePermission;
+import io.confluent.kafka.schemaregistry.filter.Permission;
+import io.confluent.rest.impersonation.ImpersonationUtils;
+import io.confluent.kafka.schemaregistry.exceptions.SchemaVersionNotSoftDeletedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.validation.constraints.NotNull;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.container.AsyncResponse;
+import javax.ws.rs.container.Suspended;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.ErrorMessage;
 import io.confluent.kafka.schemaregistry.client.rest.entities.Schema;
@@ -32,7 +59,6 @@ import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryRequestForward
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryStoreException;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaRegistryTimeoutException;
 import io.confluent.kafka.schemaregistry.exceptions.SchemaTooLargeException;
-import io.confluent.kafka.schemaregistry.exceptions.SchemaVersionNotSoftDeletedException;
 import io.confluent.kafka.schemaregistry.exceptions.UnknownLeaderException;
 import io.confluent.kafka.schemaregistry.rest.VersionId;
 import io.confluent.kafka.schemaregistry.rest.exceptions.Errors;
@@ -50,28 +76,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.tags.Tags;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.validation.constraints.NotNull;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.container.AsyncResponse;
-import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-@Path("/subjects/{subject}/versions")
+@Path("/subjects/{subject: .+}/versions")
 @Produces({Versions.SCHEMA_REGISTRY_V1_JSON_WEIGHTED,
            Versions.SCHEMA_REGISTRY_DEFAULT_JSON_WEIGHTED,
            Versions.JSON_WEIGHTED})
@@ -122,14 +128,21 @@ public class SubjectVersionsResource {
             content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                     implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public Schema getSchemaByVersion(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to include deleted schema")
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaByVersion(subject, version, lookupDeletedSchema), auth, cookie);
+  }
 
+  private Schema getSchemaByVersion(String subject, String version, boolean lookupDeletedSchema) {
     subject = QualifiedSubject.normalize(schemaRegistry.tenant(), subject);
 
     VersionId versionId;
@@ -192,13 +205,21 @@ public class SubjectVersionsResource {
             content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                     ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public String getSchemaOnly(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to include deleted schema")
-      @QueryParam("deleted") boolean lookupDeletedSchema) {
+      @QueryParam("deleted") boolean lookupDeletedSchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getSchemaOnly(subject, version, lookupDeletedSchema), auth, cookie);
+  }
+
+  private String getSchemaOnly(String subject, String version, boolean lookupDeletedSchema) {
     return getSchemaByVersion(subject, version, lookupDeletedSchema).getSchema();
   }
 
@@ -229,12 +250,19 @@ public class SubjectVersionsResource {
           content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public List<Integer> getReferencedBy(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
-      @PathParam("version") String version) {
+      @PathParam("version") String version,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> getReferencedBy(subject, version), auth, cookie);
+  }
 
+  private List<Integer> getReferencedBy(String subject, String version) {
     Schema schema = getSchemaByVersion(subject, version, true);
     if (schema == null) {
       return new ArrayList<>();
@@ -284,16 +312,23 @@ public class SubjectVersionsResource {
             content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                     ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.READ)
   public List<Integer> listVersions(
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = "Whether to include deleted schemas")
       @QueryParam("deleted") boolean lookupDeletedSchema,
       @Parameter(description = "Whether to return deleted schemas only")
-      @QueryParam("deletedOnly") boolean lookupDeletedOnlySchema) {
+      @QueryParam("deletedOnly") boolean lookupDeletedOnlySchema,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    return ImpersonationUtils.runAsUserIfImpersonationEnabled(
+        () -> listVersions(subject, lookupDeletedSchema, lookupDeletedOnlySchema), auth, cookie);
+  }
 
+  private List<Integer> listVersions(String subject, boolean lookupDeletedSchema,
+                                     boolean lookupDeletedOnlySchema) {
     subject = QualifiedSubject.normalize(schemaRegistry.tenant(), subject);
-
     // check if subject exists. If not, throw 404
     Iterator<SchemaKey> resultSchemas;
     List<Integer> allVersions = new ArrayList<>();
@@ -370,6 +405,7 @@ public class SubjectVersionsResource {
           content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.MODIFY)
   public void register(
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
@@ -378,7 +414,17 @@ public class SubjectVersionsResource {
       @Parameter(description = "Whether to normalize the given schema")
       @QueryParam("normalize") boolean normalize,
       @Parameter(description = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request) {
+      @NotNull RegisterSchemaRequest request,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      register(asyncResponse, headers, subjectName, normalize, request);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void register(AsyncResponse asyncResponse, HttpHeaders headers,
+                        String subjectName, boolean normalize, RegisterSchemaRequest request) {
     log.info("Registering new schema: subject {}, version {}, id {}, type {}, schema size {}",
              subjectName, request.getVersion(), request.getId(), request.getSchemaType(),
             request.getSchema() == null ? 0 : request.getSchema().length());
@@ -472,6 +518,7 @@ public class SubjectVersionsResource {
           content = @Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation =
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
+  @RequirePermission(Permission.MODIFY)
   public void deleteSchemaVersion(
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
@@ -480,7 +527,17 @@ public class SubjectVersionsResource {
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to perform a permanent delete")
-      @QueryParam("permanent") boolean permanentDelete) {
+      @QueryParam("permanent") boolean permanentDelete,
+      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
+      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+    ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
+      deleteSchemaVersion(asyncResponse, headers, subject, version, permanentDelete);
+      return null;
+    }, auth, cookie);
+  }
+
+  private void deleteSchemaVersion(AsyncResponse asyncResponse, HttpHeaders headers,
+                                   String subject, String version, boolean permanentDelete) {
     log.debug("Deleting schema version {} from subject {}", version, subject);
 
     subject = QualifiedSubject.normalize(schemaRegistry.tenant(), subject);

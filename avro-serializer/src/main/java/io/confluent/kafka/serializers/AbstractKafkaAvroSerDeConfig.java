@@ -18,6 +18,7 @@ package io.confluent.kafka.serializers;
 
 import java.util.Map;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kafka.common.config.ConfigDef;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClientConfig;
 import io.confluent.kafka.serializers.subject.TopicNameStrategy;
@@ -45,6 +46,7 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractKafkaSchemaSerDeConfig
       + "you can specify a scope using the 'mock://' pseudo-protocol. For example, "
       + "'mock://my-scope-name' corresponds to "
       + "'MockSchemaRegistry.getClientForScope(\"my-scope-name\")'.";
+  public static final String SCHEMA_REGISTRY_URL_STUB = "<fetched from Zookeeper>";
 
   public static final String MAX_SCHEMAS_PER_SUBJECT_CONFIG = "max.schemas.per.subject";
   public static final int MAX_SCHEMAS_PER_SUBJECT_DEFAULT = 1000;
@@ -68,6 +70,13 @@ public class AbstractKafkaAvroSerDeConfig extends AbstractKafkaSchemaSerDeConfig
   public static final String BEARER_AUTH_CREDENTIALS_SOURCE_DEFAULT = "STATIC_TOKEN";
   public static final String BEARER_AUTH_CREDENTIALS_SOURCE_DOC =
           "Specify how to pick the credentials for Bearer Auth header. ";
+
+  public static final String MAPRSASL_AUTH_CONFIG = SchemaRegistryClientConfig
+          .MAPRSASL_AUTH_CONFIG;
+  public static final Boolean MAPRSASL_AUTH_DEFAULT =  UserGroupInformation.isSecurityEnabled();
+  public static final String MAPRSASL_AUTH_DOC =
+          "Enable MapR Sasl authentication for Avro Serializer/Deserializer. "
+                  + "The supported values are true, false.";
 
   @Deprecated
   public static final String SCHEMA_REGISTRY_USER_INFO_CONFIG =

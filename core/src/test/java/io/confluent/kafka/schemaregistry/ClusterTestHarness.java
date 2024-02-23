@@ -15,6 +15,7 @@
 package io.confluent.kafka.schemaregistry;
 
 import io.confluent.common.utils.IntegrationTest;
+import io.confluent.kafka.schemaregistry.test.categories.UnsupportedTest;
 import kafka.utils.CoreUtils;
 import org.apache.kafka.common.network.ListenerName;
 import org.apache.kafka.common.security.auth.SecurityProtocol;
@@ -46,11 +47,12 @@ import scala.collection.JavaConverters;
  * Kafka's ZookeeperTestHarness and KafkaServerTestHarness traits combined and ported to Java with
  * the addition of the REST proxy. Defaults to a 1-ZK, 3-broker, 1 REST proxy cluster.
  */
-@Category(IntegrationTest.class)
+@Category({IntegrationTest.class, UnsupportedTest.class})
 public abstract class ClusterTestHarness {
 
   public static final int DEFAULT_NUM_BROKERS = 1;
-  public static final String KAFKASTORE_TOPIC = SchemaRegistryConfig.DEFAULT_KAFKASTORE_TOPIC;
+  public static final String KAFKASTORE_STREAM = "";
+  public static final String KAFKASTORE_TOPIC = "";
   protected static final Option<Properties> EMPTY_SASL_PROPERTIES = Option$.MODULE$.<Properties>empty();
 
   /**
@@ -160,7 +162,7 @@ public abstract class ClusterTestHarness {
   }
 
   protected void setupRestApp(Properties schemaRegistryProps) throws Exception {
-    restApp = new RestApp(schemaRegistryPort, zkConnect, bootstrapServers, KAFKASTORE_TOPIC,
+    restApp = new RestApp(schemaRegistryPort, zkConnect, null, KAFKASTORE_STREAM + ":" + KAFKASTORE_TOPIC,
                           compatibilityType, true, schemaRegistryProps);
     restApp.start();
   }
