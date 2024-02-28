@@ -26,11 +26,12 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
-import com.mapr.baseutils.cldbutils.CLDBRpcCommonUtils;
 import io.confluent.kafka.schemaregistry.CompatibilityLevel;
 import io.confluent.kafka.schemaregistry.ParsedSchema;
 import io.confluent.kafka.schemaregistry.ParsedSchemaHolder;
 import io.confluent.kafka.schemaregistry.SchemaProvider;
+import io.confluent.kafka.schemaregistry.client.rest.utils.SchemaRegistryDiscoveryClient;
+import io.confluent.kafka.schemaregistry.client.rest.utils.SchemaRegistryDiscoveryConfig;
 import org.I0Itec.zkclient.ZkClient;
 
 import io.confluent.kafka.schemaregistry.avro.AvroSchema;
@@ -415,6 +416,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
 //      Skipping any leader election logic and always treating ourselves as leader
 //      electLeader();
     }
+    saveUrlInZk();
   }
 
   public void postInit() throws SchemaRegistryException {
@@ -428,7 +430,6 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
     log.info("Joining schema registry with Kafka-based coordination");
     leaderElector = new KafkaGroupLeaderElector(config, myIdentity, this);
     try {
-      saveUrlInZk();
       leaderElector.init();
     } catch (SchemaRegistryStoreException e) {
       throw new SchemaRegistryInitializationException(
@@ -443,8 +444,14 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   }
 
   private void saveUrlInZk() throws SchemaRegistryException {
+    // This should be probably refactored by KAFKA-1019...
+    SchemaRegistryDiscoveryClient discoveryClient = new SchemaRegistryDiscoveryClient()
+            .serviceId(config.getString(SchemaRegistryConfig.SCHEMA_REGISTRY_SERVICE_ID_CONFIG))
+            .timeout(SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT)
+            .retries(SchemaRegistryDiscoveryConfig.DISCOVERY_RETRIES_DEFAULT)
+            .retryInterval(SchemaRegistryDiscoveryConfig.DISCOVERY_INTERVAL_DEFAULT);
     final ZkClient zkClient =
-            new ZkClient(CLDBRpcCommonUtils.getInstance().getZkConnect()); //would it work?
+            discoveryClient.createZkClient(discoveryClient.getSchemaRegistryZkUrl());
     if (!zkClient.exists(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR)) {
       zkClient.createPersistent(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR);
     }

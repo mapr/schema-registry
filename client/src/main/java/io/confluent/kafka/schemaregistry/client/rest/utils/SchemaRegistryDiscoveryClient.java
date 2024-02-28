@@ -96,14 +96,14 @@ public class SchemaRegistryDiscoveryClient {
     }
   }
 
-  private String getSchemaRegistryZkUrl() {
+  public String getSchemaRegistryZkUrl() {
     String srZkNamespace = SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + serviceId;
     String srClusterZkUrl = getZkUrl();
     String zkConnForNamespaceCreation = substringBefore(srClusterZkUrl, "/");
     return zkConnForNamespaceCreation + "/" + srZkNamespace;
   }
 
-  protected ZkClient createZkClient(String zkUrl) {
+  public ZkClient createZkClient(String zkUrl) {
     return new ZkClient(zkUrl, timeoutMs, timeoutMs, new ZKStringSerializer());
   }
 
