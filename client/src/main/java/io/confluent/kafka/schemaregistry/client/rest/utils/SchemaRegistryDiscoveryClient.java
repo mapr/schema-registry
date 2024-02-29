@@ -37,7 +37,7 @@ import static org.apache.commons.lang3.StringUtils.substringBefore;
 public class SchemaRegistryDiscoveryClient {
   private static final Logger LOG = LoggerFactory.getLogger(SchemaRegistryDiscoveryClient.class);
 
-  protected static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
+  public static final String SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX = "schema_registry_";
   protected static final String SCHEMAREGISTRY_ZK_URLS_DIR = "/sr_urls";
 
   private String serviceId = SchemaRegistryDiscoveryConfig.SERVICE_ID_DEFAULT;
@@ -96,14 +96,14 @@ public class SchemaRegistryDiscoveryClient {
     }
   }
 
-  public String getSchemaRegistryZkUrl() {
+  private String getSchemaRegistryZkUrl() {
     String srZkNamespace = SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX + serviceId;
     String srClusterZkUrl = getZkUrl();
     String zkConnForNamespaceCreation = substringBefore(srClusterZkUrl, "/");
     return zkConnForNamespaceCreation + "/" + srZkNamespace;
   }
 
-  public ZkClient createZkClient(String zkUrl) {
+  protected ZkClient createZkClient(String zkUrl) {
     return new ZkClient(zkUrl, timeoutMs, timeoutMs, new ZKStringSerializer());
   }
 
@@ -139,7 +139,7 @@ public class SchemaRegistryDiscoveryClient {
     return this;
   }
 
-  private static class ZKStringSerializer implements ZkSerializer {
+  public static class ZKStringSerializer implements ZkSerializer {
 
     @Override
     public byte[] serialize(Object data) throws ZkMarshallingError {

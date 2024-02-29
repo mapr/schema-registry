@@ -111,6 +111,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.net.ssl.HostnameVerifier;
 import org.apache.avro.reflect.Nullable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.utils.Time;
@@ -443,15 +445,33 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
     kafkaStore.waitForInit();
   }
 
+  private ZkClient createZkClient(String path) throws SchemaRegistryException {
+    try {
+      String zkUrl = FileSystem.get(new Configuration()).getZkConnectString() + path;
+      return new ZkClient(zkUrl,
+              SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT,
+              SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT,
+              new SchemaRegistryDiscoveryClient.ZKStringSerializer());
+    } catch (IOException e) {
+      throw new SchemaRegistryException("Could not create zookeeper client", e);
+    }
+  }
+
+  private void ensureZkNamespaceExists(String namespace) throws SchemaRegistryException {
+    ZkClient zkClientForNamespaceCreation = createZkClient("");
+    if (!zkClientForNamespaceCreation.exists(namespace)) {
+      zkClientForNamespaceCreation.createPersistent(namespace);
+    }
+    zkClientForNamespaceCreation.close();
+  }
+
   private void saveUrlInZk() throws SchemaRegistryException {
     // This should be probably refactored by KAFKA-1019...
-    SchemaRegistryDiscoveryClient discoveryClient = new SchemaRegistryDiscoveryClient()
-            .serviceId(config.getString(SchemaRegistryConfig.SCHEMA_REGISTRY_SERVICE_ID_CONFIG))
-            .timeout(SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT)
-            .retries(SchemaRegistryDiscoveryConfig.DISCOVERY_RETRIES_DEFAULT)
-            .retryInterval(SchemaRegistryDiscoveryConfig.DISCOVERY_INTERVAL_DEFAULT);
-    final ZkClient zkClient =
-            discoveryClient.createZkClient(discoveryClient.getSchemaRegistryZkUrl());
+    String namespace = "/" + SchemaRegistryDiscoveryClient.SCHEMAREGISTRY_ZK_NAMESPACE_PREFIX
+            + config.getString(SchemaRegistryConfig.SCHEMA_REGISTRY_SERVICE_ID_CONFIG);
+    ensureZkNamespaceExists(namespace);
+    ZkClient zkClient = createZkClient(namespace);
+
     if (!zkClient.exists(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR)) {
       zkClient.createPersistent(SchemaRegistryConfig.SCHEMAREGISTRY_ZK_URLS_DIR);
     }
