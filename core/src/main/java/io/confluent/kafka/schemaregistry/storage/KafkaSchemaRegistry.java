@@ -168,6 +168,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   private final List<Consumer<Boolean>> leaderChangeListeners = new CopyOnWriteArrayList<>();
   private final AtomicBoolean initialized = new AtomicBoolean(false);
   private final Time time;
+  private final List<ZkClient> zkClientsToClose = new ArrayList<>();
 
   public KafkaSchemaRegistry(SchemaRegistryConfig config,
                              Serializer<SchemaRegistryKey, SchemaRegistryValue> serializer)
@@ -448,10 +449,12 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   private ZkClient createZkClient(String path) throws SchemaRegistryException {
     try {
       String zkUrl = FileSystem.get(new Configuration()).getZkConnectString() + path;
-      return new ZkClient(zkUrl,
+      ZkClient zkClient = new ZkClient(zkUrl,
               SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT,
               SchemaRegistryDiscoveryConfig.DISCOVERY_TIMEOUT_DEFAULT,
               new SchemaRegistryDiscoveryClient.ZKStringSerializer());
+      zkClientsToClose.add(zkClient);
+      return zkClient;
     } catch (IOException e) {
       throw new SchemaRegistryException("Could not create zookeeper client", e);
     }
@@ -1936,6 +1939,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   public void close() throws IOException {
     log.info("Shutting down schema registry");
     kafkaStore.close();
+    zkClientsToClose.forEach(ZkClient::close);
     metadataEncoder.close();
     if (leaderElector != null) {
       leaderElector.close();
