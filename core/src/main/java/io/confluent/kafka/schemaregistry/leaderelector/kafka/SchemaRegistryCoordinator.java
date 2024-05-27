@@ -44,7 +44,8 @@ import java.util.Set;
  * This class manages the coordination process with the Kafka group coordinator on the broker for
  * coordinating schema registry instances.
  */
-final class SchemaRegistryCoordinator extends AbstractCoordinator implements Closeable {
+final class SchemaRegistryCoordinator extends AbstractCoordinator
+        implements Closeable, GenericSRCoordinator {
   private static final Logger log = LoggerFactory.getLogger(SchemaRegistryCoordinator.class);
 
   public static final String SR_SUBPROTOCOL_V0 = "v0";
@@ -131,6 +132,11 @@ final class SchemaRegistryCoordinator extends AbstractCoordinator implements Clo
       elapsed = now - start;
       remaining = timeout - elapsed;
     } while (remaining > 0);
+  }
+
+  @Override
+  public void wakeup() {
+    client.wakeup();
   }
 
   @Override

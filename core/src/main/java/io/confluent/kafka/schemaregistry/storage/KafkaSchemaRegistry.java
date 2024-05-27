@@ -415,9 +415,7 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
     }
 
     if (!delayLeaderElection) {
-//      Kafka group coordination for SR is not implemented in MapR SR, see KAFKA-1015
-//      Skipping any leader election logic and always treating ourselves as leader
-//      electLeader();
+      electLeader();
     }
     saveUrlInZk();
   }
@@ -506,15 +504,12 @@ public class KafkaSchemaRegistry implements SchemaRegistry, LeaderAwareSchemaReg
   }
 
   public boolean isLeader() {
-//      Kafka group coordination for SR is not implemented in MapR SR, see KAFKA-1015
-//      Skipping any leader election logic and always treating ourselves as leader
-    return true;
-//    kafkaStore.leaderLock().lock();
-//    try {
-//      return leaderIdentity != null && leaderIdentity.equals(myIdentity);
-//    } finally {
-//      kafkaStore.leaderLock().unlock();
-//    }
+    kafkaStore.leaderLock().lock();
+    try {
+      return leaderIdentity != null && leaderIdentity.equals(myIdentity);
+    } finally {
+      kafkaStore.leaderLock().unlock();
+    }
   }
 
   /**

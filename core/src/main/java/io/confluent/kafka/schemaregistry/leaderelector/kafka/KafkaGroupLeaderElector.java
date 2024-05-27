@@ -29,6 +29,7 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.Metadata;
 import org.apache.kafka.clients.NetworkClient;
 import org.apache.kafka.clients.consumer.internals.ConsumerNetworkClient;
+import org.apache.kafka.clients.mapr.util.MaprKafkaUtils;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.internals.ClusterResourceListeners;
@@ -46,6 +47,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,12 +69,12 @@ public class KafkaGroupLeaderElector implements LeaderElector, SchemaRegistryReb
 
   private final int initTimeout;
   private final String clientId;
-  private final ConsumerNetworkClient client;
+  private ConsumerNetworkClient client;
   private final Metrics metrics;
-  private final Metadata metadata;
+  private Metadata metadata;
   private final long retryBackoffMs;
   private final boolean stickyLeaderElection;
-  private final SchemaRegistryCoordinator coordinator;
+  private final GenericSRCoordinator coordinator;
   private final KafkaSchemaRegistry schemaRegistry;
 
   private AtomicBoolean stopped = new AtomicBoolean(false);
@@ -111,69 +114,78 @@ public class KafkaGroupLeaderElector implements LeaderElector, SchemaRegistryReb
       this.metrics = new Metrics(metricConfig, reporters, time, metricsContext);
       this.retryBackoffMs = clientConfig.getLong(CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG);
       String groupId = config.getString(SchemaRegistryConfig.SCHEMAREGISTRY_GROUP_ID_CONFIG);
-      LogContext logContext = new LogContext("[Schema registry clientId=" + clientId + ", groupId="
-          + groupId + "] ");
-      this.metadata = new Metadata(
-          retryBackoffMs,
-          clientConfig.getLong(CommonClientConfigs.METADATA_MAX_AGE_CONFIG),
-          logContext,
-          new ClusterResourceListeners()
-      );
-      List<String> bootstrapServers
-          = config.getList(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG);
-      List<InetSocketAddress> addresses = ClientUtils.parseAndValidateAddresses(bootstrapServers,
-          clientConfig.getString(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG));
-      this.metadata.bootstrap(addresses);
-      String metricGrpPrefix = "kafka.schema.registry";
+      boolean isMapr = Files.exists(Paths.get(MaprKafkaUtils.MAPR_CLUSTERS_FILE));
+      if (isMapr) {
+        this.coordinator = new MarlinSRCoordinator(groupId,
+                config,
+                myIdentity,
+                this,
+                schemaRegistry.getMetricsContainer().getNodeCountMetric(),
+                stickyLeaderElection);
+      } else {
+        LogContext logContext = new LogContext(
+                "[Schema registry clientId=" + clientId + ", groupId=" + groupId + "] ");
+        this.metadata = new Metadata(
+                retryBackoffMs,
+                clientConfig.getLong(CommonClientConfigs.METADATA_MAX_AGE_CONFIG),
+                logContext,
+                new ClusterResourceListeners()
+        );
+        List<String> bootstrapServers
+                = config.getList(SchemaRegistryConfig.KAFKASTORE_BOOTSTRAP_SERVERS_CONFIG);
+        List<InetSocketAddress> addresses = ClientUtils.parseAndValidateAddresses(bootstrapServers,
+                clientConfig.getString(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG));
+        this.metadata.bootstrap(addresses);
+        String metricGrpPrefix = "kafka.schema.registry";
+        ChannelBuilder channelBuilder = ClientUtils.createChannelBuilder(
+                clientConfig,
+                time,
+                logContext);
+        long maxIdleMs = clientConfig.getLong(CommonClientConfigs.CONNECTIONS_MAX_IDLE_MS_CONFIG);
 
-      ChannelBuilder channelBuilder = ClientUtils.createChannelBuilder(
-          clientConfig,
-          time,
-          logContext);
-      long maxIdleMs = clientConfig.getLong(CommonClientConfigs.CONNECTIONS_MAX_IDLE_MS_CONFIG);
+        NetworkClient netClient = new NetworkClient(
+                new Selector(maxIdleMs, metrics, time, metricGrpPrefix, channelBuilder, logContext),
+                this.metadata,
+                clientId,
+                100, // a fixed large enough value will suffice
+                clientConfig.getLong(CommonClientConfigs.RECONNECT_BACKOFF_MS_CONFIG),
+                clientConfig.getLong(CommonClientConfigs.RECONNECT_BACKOFF_MAX_MS_CONFIG),
+                clientConfig.getInt(CommonClientConfigs.SEND_BUFFER_CONFIG),
+                clientConfig.getInt(CommonClientConfigs.RECEIVE_BUFFER_CONFIG),
+                clientConfig.getInt(CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG),
+                10000L ,
+                127000L ,
+                time,
+                true,
+                new ApiVersions(),
+                logContext);
 
-      NetworkClient netClient = new NetworkClient(
-          new Selector(maxIdleMs, metrics, time, metricGrpPrefix, channelBuilder, logContext),
-          this.metadata,
-          clientId,
-          100, // a fixed large enough value will suffice
-          clientConfig.getLong(CommonClientConfigs.RECONNECT_BACKOFF_MS_CONFIG),
-          clientConfig.getLong(CommonClientConfigs.RECONNECT_BACKOFF_MAX_MS_CONFIG),
-          clientConfig.getInt(CommonClientConfigs.SEND_BUFFER_CONFIG),
-          clientConfig.getInt(CommonClientConfigs.RECEIVE_BUFFER_CONFIG),
-          clientConfig.getInt(CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG),
-              10000L ,
-              127000L ,
-          time,
-          true,
-          new ApiVersions(),
-          logContext);
-
-      this.client = new ConsumerNetworkClient(
-          logContext,
-          netClient,
-          metadata,
-          time,
-          retryBackoffMs,
-          clientConfig.getInt(CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG),
-          Integer.MAX_VALUE
-      );
-      this.coordinator = new SchemaRegistryCoordinator(
-          logContext,
-          this.client,
-          groupId,
-          config.getInt(SchemaRegistryConfig.KAFKAGROUP_REBALANCE_TIMEOUT_MS_CONFIG),
-          config.getInt(SchemaRegistryConfig.KAFKAGROUP_SESSION_TIMEOUT_MS_CONFIG),
-          config.getInt(SchemaRegistryConfig.KAFKAGROUP_HEARTBEAT_INTERVAL_MS_CONFIG),
-          metrics,
-          metricGrpPrefix,
-          time,
-          retryBackoffMs,
-          myIdentity,
-          this,
-          schemaRegistry.getMetricsContainer().getNodeCountMetric(),
-          stickyLeaderElection
-      );
+        this.client = new ConsumerNetworkClient(
+                logContext,
+                netClient,
+                metadata,
+                time,
+                retryBackoffMs,
+                clientConfig.getInt(CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG),
+                Integer.MAX_VALUE
+        );
+        this.coordinator = new SchemaRegistryCoordinator(
+                logContext,
+                this.client,
+                groupId,
+                config.getInt(SchemaRegistryConfig.KAFKAGROUP_REBALANCE_TIMEOUT_MS_CONFIG),
+                config.getInt(SchemaRegistryConfig.KAFKAGROUP_SESSION_TIMEOUT_MS_CONFIG),
+                config.getInt(SchemaRegistryConfig.KAFKAGROUP_HEARTBEAT_INTERVAL_MS_CONFIG),
+                metrics,
+                metricGrpPrefix,
+                time,
+                retryBackoffMs,
+                myIdentity,
+                this,
+                schemaRegistry.getMetricsContainer().getNodeCountMetric(),
+                stickyLeaderElection
+        );
+      }
 
       AppInfoParser.registerAppInfo(JMX_PREFIX, clientId, metrics, time.milliseconds());
 
@@ -296,8 +308,8 @@ public class KafkaGroupLeaderElector implements LeaderElector, SchemaRegistryReb
     log.info("Stopping the schema registry group member.");
 
     // Interrupt any outstanding poll calls
-    if (client != null) {
-      client.wakeup();
+    if (coordinator != null) {
+      coordinator.wakeup();
     }
 
     // Wait for processing thread to complete
