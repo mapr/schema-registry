@@ -7,8 +7,8 @@ if [ "$1" = "upgrade" ]; then
    #Saving of old configurations
    OLD_TIMESTAMP="$2"
    OLD_VERSION=$( echo $OLD_TIMESTAMP | cut -d'.' -f1-3 )
-   mkdir -p __PREFIX__/schema-registry/schema-registry-${OLD_TIMESTAMP}/etc/schema-registry
-   cp __PREFIX__/schema-registry/schema-registry-${OLD_VERSION}/etc/schema-registry/* __PREFIX__/schema-registry/schema-registry-${OLD_TIMESTAMP}/etc/schema-registry
+   mkdir -p __PREFIX__/schema-registry/schema-registry-${OLD_TIMESTAMP}/
+   mv __PREFIX__/schema-registry/schema-registry-${OLD_VERSION}/etc __PREFIX__/schema-registry/schema-registry-${OLD_TIMESTAMP}/etc
 
    DAEMON_CONF=__PREFIX__/conf/daemon.conf
    if [ -f "$DAEMON_CONF" ]; then
