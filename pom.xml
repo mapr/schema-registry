@@ -106,7 +106,7 @@
         <tink.version>1.12.0</tink.version>
         <tink.aws.kms.version>1.9.1</tink.aws.kms.version>
         <tink.gcp.kms.version>1.9.0</tink.gcp.kms.version>
-        <wire.version>4.9.0</wire.version>
+        <wire.version>5.0.0</wire.version>
         <swagger.version>2.1.10</swagger.version>
         <io.confluent.schema-registry.version>7.6.0.310-eep-942-SNAPSHOT</io.confluent.schema-registry.version>
         <rest-utils.version>7.6.0.210-eep-942-SNAPSHOT</rest-utils.version>

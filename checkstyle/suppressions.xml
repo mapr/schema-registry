@@ -49,7 +49,7 @@
       files="."/>
 
     <suppress checks="MemberName"
-              files="(DynamicSchema|EnumDefinition|MessageDefinition|ServiceDefinition).java"/>
+              files="(DynamicSchema|EnumDefinition|FieldDefinition|MessageDefinition|ServiceDefinition).java"/>
 
     <suppress checks="[a-zA-Z0-9]*"
               files="(BoundedConcurrentHashMap|DecimalOrBuilder|DecimalProto|Decimal|MetaProto).java"/>
