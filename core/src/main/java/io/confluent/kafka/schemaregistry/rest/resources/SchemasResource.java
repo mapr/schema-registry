@@ -21,15 +21,15 @@ import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Context;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.ErrorMessage;
@@ -152,6 +152,7 @@ public class SchemasResource {
   @PerformanceMetric("schemas.ids.get-schema")
   @RequirePermission(Permission.READ)
   public SchemaString getSchema(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @Parameter(description = "Name of the subject")
@@ -159,11 +160,9 @@ public class SchemasResource {
       @Parameter(description = "Desired output format, dependent on schema type")
       @DefaultValue("") @QueryParam("format") String format,
       @Parameter(description = "Whether to fetch the maximum schema identifier that exists")
-      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @DefaultValue("false") @QueryParam("fetchMaxId") boolean fetchMaxId) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getSchema(id, subject, format, fetchMaxId), auth, cookie);
+        () -> getSchema(id, subject, format, fetchMaxId), httpServletRequest.getRemoteUser());
   }
 
   private SchemaString getSchema(Integer id, String subject, String format, boolean fetchMaxId) {
@@ -207,16 +206,15 @@ public class SchemasResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public Set<String> getSubjects(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @Parameter(description = "Filters results by the respective subject")
       @QueryParam("subject") String subject,
       @Parameter(description = "Whether to include subjects where the schema was deleted")
-      @QueryParam("deleted") boolean lookupDeletedSchema,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deleted") boolean lookupDeletedSchema) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getSubjects(id, subject, lookupDeletedSchema), auth, cookie);
+        () -> getSubjects(id, subject, lookupDeletedSchema), httpServletRequest.getRemoteUser());
   }
 
   private Set<String> getSubjects(Integer id, String subject, boolean lookupDeletedSchema) {
@@ -263,16 +261,15 @@ public class SchemasResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public List<SubjectVersion> getVersions(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Globally unique identifier of the schema", required = true)
       @PathParam("id") Integer id,
       @Parameter(description = "Filters results by the respective subject")
       @QueryParam("subject") String subject,
       @Parameter(description = "Whether to include subject versions where the schema was deleted")
-      @QueryParam("deleted") boolean lookupDeletedSchema,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deleted") boolean lookupDeletedSchema) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getVersions(id, subject, lookupDeletedSchema), auth, cookie);
+        () -> getVersions(id, subject, lookupDeletedSchema), httpServletRequest.getRemoteUser());
   }
 
   private List<SubjectVersion> getVersions(Integer id, String subject,
@@ -359,10 +356,9 @@ public class SchemasResource {
                   ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
-  public Set<String> getSchemaTypes(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-                                    @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+  public Set<String> getSchemaTypes(@Context HttpServletRequest httpServletRequest) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getSchemaTypes(), auth, cookie);
+        () -> getSchemaTypes(), httpServletRequest.getRemoteUser());
   }
 
   private Set<String> getSchemaTypes() {

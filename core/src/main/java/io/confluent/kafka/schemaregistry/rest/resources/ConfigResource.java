@@ -44,6 +44,7 @@ import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -52,7 +53,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
@@ -103,15 +103,15 @@ public class ConfigResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateSubjectLevelConfig(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Context HttpHeaders headers,
       @Parameter(description = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @NotNull ConfigUpdateRequest request) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> updateSubjectLevelConfig(subject, headers, request), auth, cookie);
+        () -> updateSubjectLevelConfig(subject, headers, request),
+            httpServletRequest.getRemoteUser());
   }
 
   private ConfigUpdateRequest updateSubjectLevelConfig(String subject, HttpHeaders headers,
@@ -178,16 +178,15 @@ public class ConfigResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public Config getSubjectLevelConfig(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description =
           "Whether to return the global compatibility level "
               + " if subject compatibility level not found")
-      @QueryParam("defaultToGlobal") boolean defaultToGlobal,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("defaultToGlobal") boolean defaultToGlobal) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
-            getSubjectLevelConfig(subject, defaultToGlobal), auth, cookie);
+            getSubjectLevelConfig(subject, defaultToGlobal), httpServletRequest.getRemoteUser());
   }
 
   private Config getSubjectLevelConfig(String subject, boolean defaultToGlobal) {
@@ -229,13 +228,12 @@ public class ConfigResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.MODIFY)
   public ConfigUpdateRequest updateTopLevelConfig(
+      @Context HttpServletRequest httpServletRequest,
       @Context HttpHeaders headers,
       @Parameter(description = "Config Update Request", required = true)
-      @NotNull ConfigUpdateRequest request,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @NotNull ConfigUpdateRequest request) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(() ->
-            updateTopLevelConfig(headers, request), auth, cookie);
+            updateTopLevelConfig(headers, request), httpServletRequest.getRemoteUser());
   }
 
   private ConfigUpdateRequest updateTopLevelConfig(HttpHeaders headers,
@@ -291,10 +289,9 @@ public class ConfigResource {
           content = @Content(schema = @Schema(implementation = ErrorMessage.class)))})
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
-  public Config getTopLevelConfig(@HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-                                  @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+  public Config getTopLevelConfig(@Context HttpServletRequest httpServletRequest) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-            this::getTopLevelConfig, auth, cookie);
+            this::getTopLevelConfig, httpServletRequest.getRemoteUser());
   }
 
   private Config getTopLevelConfig() {

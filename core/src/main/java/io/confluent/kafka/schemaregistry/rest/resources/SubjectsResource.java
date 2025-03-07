@@ -45,6 +45,7 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
@@ -56,7 +57,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Context;
@@ -107,6 +107,7 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.get-schema")
   @RequirePermission(Permission.READ)
   public void lookUpSchemaUnderSubject(
+      @Context HttpServletRequest httpServletRequest,
       final @Suspended AsyncResponse asyncResponse,
       @Parameter(description = "Subject under which the schema will be registered", required = true)
       @PathParam("subject") String subject,
@@ -115,13 +116,11 @@ public class SubjectsResource {
       @Parameter(description = "Whether to lookup deleted schemas")
       @QueryParam("deleted") boolean lookupDeletedSchema,
       @Parameter(description = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @NotNull RegisterSchemaRequest request) {
     ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
       lookUpSchemaUnderSubject(asyncResponse, subject, normalize, lookupDeletedSchema, request);
       return null;
-    }, auth, cookie);
+    }, httpServletRequest.getRemoteUser());
   }
 
   private void lookUpSchemaUnderSubject(AsyncResponse asyncResponse, String subject,
@@ -231,17 +230,17 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.list")
   @RequirePermission(Permission.READ)
   public Set<String> list(
+      @Context HttpServletRequest httpServletRequest,
       @DefaultValue(QualifiedSubject.CONTEXT_WILDCARD)
       @Parameter(description = "Subject name prefix")
       @QueryParam("subjectPrefix") String subjectPrefix,
       @Parameter(description = "Whether to look up deleted subjects")
       @QueryParam("deleted") boolean lookupDeletedSubjects,
       @Parameter(description = "Whether to return deleted subjects only")
-      @QueryParam("deletedOnly") boolean lookupDeletedOnlySubjects,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deletedOnly") boolean lookupDeletedOnlySubjects) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-      () -> list(subjectPrefix, lookupDeletedSubjects, lookupDeletedOnlySubjects), auth, cookie);
+            () -> list(subjectPrefix, lookupDeletedSubjects, lookupDeletedOnlySubjects),
+            httpServletRequest.getRemoteUser());
   }
 
   private Set<String> list(
@@ -291,18 +290,17 @@ public class SubjectsResource {
   @PerformanceMetric("subjects.delete-subject")
   @RequirePermission(Permission.MODIFY)
   public void deleteSubject(
+      @Context HttpServletRequest httpServletRequest,
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = "Whether to perform a permanent delete")
-      @QueryParam("permanent") boolean permanentDelete,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("permanent") boolean permanentDelete) {
     ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
       deleteSubject(asyncResponse, headers, subject, permanentDelete);
       return null;
-    }, auth, cookie);
+    }, httpServletRequest.getRemoteUser());
   }
 
   private void deleteSubject(AsyncResponse asyncResponse,

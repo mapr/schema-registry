@@ -18,7 +18,6 @@ package io.confluent.kafka.schemaregistry.filter;
 import io.confluent.kafka.schemaregistry.util.ByteConsumerPool;
 import io.confluent.kafka.schemaregistry.rest.exceptions.AuthorizationException;
 import io.confluent.kafka.schemaregistry.util.ByteProducerPool;
-import io.confluent.rest.auth.MaprAuthenticationUtils;
 import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -29,8 +28,12 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 public class AuthorizationFilter implements ContainerRequestFilter {
@@ -53,7 +56,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
   @Override
   public void filter(ContainerRequestContext requestContext) {
     try {
-      String userName = MaprAuthenticationUtils.getUserNameFromRequestContext(requestContext);
+      String userName = getUsername(requestContext);
       ImpersonationUtils.executor().runAs(userName, () -> {
         checkPermissions();
         return null;
@@ -63,6 +66,15 @@ public class AuthorizationFilter implements ContainerRequestFilter {
           .entity(e.getMessage())
           .build());
     }
+  }
+
+  private String getUsername(ContainerRequestContext containerRequestContext) {
+    return Optional.ofNullable(containerRequestContext)
+            .map(ContainerRequestContext::getSecurityContext)
+            .map(SecurityContext::getUserPrincipal)
+            .map(Principal::getName)
+            .orElseThrow(() -> new NoSuchElementException(
+                    "Could not get username from requestContext"));
   }
 
   public void initialize() {

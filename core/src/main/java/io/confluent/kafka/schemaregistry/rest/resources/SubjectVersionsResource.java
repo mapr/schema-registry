@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -35,7 +36,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
@@ -130,16 +130,16 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public Schema getSchemaByVersion(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to include deleted schema")
-      @QueryParam("deleted") boolean lookupDeletedSchema,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deleted") boolean lookupDeletedSchema) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getSchemaByVersion(subject, version, lookupDeletedSchema), auth, cookie);
+        () -> getSchemaByVersion(subject, version, lookupDeletedSchema),
+            httpServletRequest.getRemoteUser());
   }
 
   private Schema getSchemaByVersion(String subject, String version, boolean lookupDeletedSchema) {
@@ -207,16 +207,16 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public String getSchemaOnly(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to include deleted schema")
-      @QueryParam("deleted") boolean lookupDeletedSchema,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deleted") boolean lookupDeletedSchema) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getSchemaOnly(subject, version, lookupDeletedSchema), auth, cookie);
+        () -> getSchemaOnly(subject, version, lookupDeletedSchema),
+            httpServletRequest.getRemoteUser());
   }
 
   private String getSchemaOnly(String subject, String version, boolean lookupDeletedSchema) {
@@ -252,14 +252,13 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public List<Integer> getReferencedBy(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = VERSION_PARAM_DESC, required = true)
-      @PathParam("version") String version,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @PathParam("version") String version) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> getReferencedBy(subject, version), auth, cookie);
+        () -> getReferencedBy(subject, version), httpServletRequest.getRemoteUser());
   }
 
   private List<Integer> getReferencedBy(String subject, String version) {
@@ -314,16 +313,16 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.READ)
   public List<Integer> listVersions(
+      @Context HttpServletRequest httpServletRequest,
       @Parameter(description = "Name of the subject", required = true)
       @PathParam("subject") String subject,
       @Parameter(description = "Whether to include deleted schemas")
       @QueryParam("deleted") boolean lookupDeletedSchema,
       @Parameter(description = "Whether to return deleted schemas only")
-      @QueryParam("deletedOnly") boolean lookupDeletedOnlySchema,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("deletedOnly") boolean lookupDeletedOnlySchema) {
     return ImpersonationUtils.runAsUserIfImpersonationEnabled(
-        () -> listVersions(subject, lookupDeletedSchema, lookupDeletedOnlySchema), auth, cookie);
+        () -> listVersions(subject, lookupDeletedSchema, lookupDeletedOnlySchema),
+            httpServletRequest.getRemoteUser());
   }
 
   private List<Integer> listVersions(String subject, boolean lookupDeletedSchema,
@@ -407,6 +406,7 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.MODIFY)
   public void register(
+      @Context HttpServletRequest httpServletRequest,
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
       @Parameter(description = "Name of the subject", required = true)
@@ -414,13 +414,11 @@ public class SubjectVersionsResource {
       @Parameter(description = "Whether to normalize the given schema")
       @QueryParam("normalize") boolean normalize,
       @Parameter(description = "Schema", required = true)
-      @NotNull RegisterSchemaRequest request,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @NotNull RegisterSchemaRequest request) {
     ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
       register(asyncResponse, headers, subjectName, normalize, request);
       return null;
-    }, auth, cookie);
+    }, httpServletRequest.getRemoteUser());
   }
 
   private void register(AsyncResponse asyncResponse, HttpHeaders headers,
@@ -520,6 +518,7 @@ public class SubjectVersionsResource {
   @Tags(@Tag(name = apiTag))
   @RequirePermission(Permission.MODIFY)
   public void deleteSchemaVersion(
+      @Context HttpServletRequest httpServletRequest,
       final @Suspended AsyncResponse asyncResponse,
       @Context HttpHeaders headers,
       @Parameter(description = "Name of the subject", required = true)
@@ -527,13 +526,11 @@ public class SubjectVersionsResource {
       @Parameter(description = VERSION_PARAM_DESC, required = true)
       @PathParam("version") String version,
       @Parameter(description = "Whether to perform a permanent delete")
-      @QueryParam("permanent") boolean permanentDelete,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("permanent") boolean permanentDelete) {
     ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
       deleteSchemaVersion(asyncResponse, headers, subject, version, permanentDelete);
       return null;
-    }, auth, cookie);
+    }, httpServletRequest.getRemoteUser());
   }
 
   private void deleteSchemaVersion(AsyncResponse asyncResponse, HttpHeaders headers,

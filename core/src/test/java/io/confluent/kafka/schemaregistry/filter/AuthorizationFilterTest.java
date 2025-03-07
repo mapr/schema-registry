@@ -28,7 +28,9 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import java.io.IOException;
+import java.security.Principal;
 import java.util.concurrent.ExecutionException;
 
 import static io.confluent.kafka.schemaregistry.filter.AuthorizationTestResource.*;
@@ -90,8 +92,7 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   @Test
   public void unauthenticatedRequestIsForbidden() {
     final ContainerRequest request = mock(ContainerRequest.class);
-    expect(request.getHeaderString(HttpHeaders.AUTHORIZATION)).andStubReturn(null);
-    expect(request.getCookies()).andStubReturn(ImmutableMap.of());
+    expect(request.getSecurityContext()).andStubReturn(null);
     final Capture<Response> capturedResponse = Capture.newInstance();
     expectAbortWith(request, capture(capturedResponse));
     replayAll();
@@ -202,13 +203,12 @@ public class AuthorizationFilterTest extends EasyMockSupport {
   }
 
   private ContainerRequest createAuthenticatedRequest() {
+    Principal principal = mock(Principal.class);
+    expect(principal.getName()).andReturn("user");
+    SecurityContext securityContext = mock(SecurityContext.class);
+    expect(securityContext.getUserPrincipal()).andReturn(principal);
     final ContainerRequest request = mock(ContainerRequest.class);
-    expect(request.getHeaderString(HttpHeaders.AUTHORIZATION))
-        .andStubReturn("Basic dXNlcjp1c2Vy");
-    expect(request.getCookies())
-        .andStubReturn(ImmutableMap.of(
-        "hadoop.auth", new Cookie("hadoop.auth", "hadoop.auth=smt&u=user")
-    ));
+    expect(request.getSecurityContext()).andReturn(securityContext);
     return request;
   }
 

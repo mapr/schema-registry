@@ -21,16 +21,16 @@ import io.confluent.rest.impersonation.ImpersonationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Context;
 
 import io.confluent.kafka.schemaregistry.client.rest.Versions;
 import io.confluent.kafka.schemaregistry.client.rest.entities.ErrorMessage;
@@ -110,6 +110,7 @@ public class CompatibilityResource {
   @PerformanceMetric("compatibility.subjects.versions.verify")
   @RequirePermission(Permission.READ)
   public void testCompatibilityBySubjectName(
+      @Context HttpServletRequest httpServletRequest,
       final @Suspended AsyncResponse asyncResponse,
       @Parameter(description = "Subject of the schema version against which compatibility is to "
           + "be tested",
@@ -126,14 +127,12 @@ public class CompatibilityResource {
       @Parameter(description = "Schema", required = true)
       @NotNull RegisterSchemaRequest request,
       @Parameter(description = "Whether to return detailed error messages")
-      @QueryParam("verbose") boolean verbose,
-      @HeaderParam(HttpHeaders.AUTHORIZATION) String auth,
-      @HeaderParam(HttpHeaders.COOKIE) String cookie) {
+      @QueryParam("verbose") boolean verbose) {
     ImpersonationUtils.runAsUserIfImpersonationEnabled(() -> {
       testCompatibilityBySubjectName(asyncResponse, subject, version,
               normalize, request, verbose);
       return null;
-    }, auth, cookie);
+    }, httpServletRequest.getRemoteUser());
   }
 
   private void testCompatibilityBySubjectName(AsyncResponse asyncResponse, String subject,
