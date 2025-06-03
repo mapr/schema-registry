@@ -74,6 +74,12 @@
             <groupId>com.kjetland</groupId>
             <artifactId>mbknor-jackson-jsonschema_${kafka.scala.version}</artifactId>
         </dependency>
+	<!-- This is to override classgraph version from com.kjetland:mbknor-jackson-jsonschema with our own version -->
+        <dependency>
+            <groupId>io.github.classgraph</groupId>
+            <artifactId>classgraph</artifactId>
+            <version>${classgraph.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
