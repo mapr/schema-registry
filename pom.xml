@@ -112,6 +112,8 @@
         <commons.lang3.version>3.12.0</commons.lang3.version>
         <bouncycastle.jdk18.version>1.77</bouncycastle.jdk18.version>
         <commons.validator.version>1.7</commons.validator.version>
+        <!-- This is only to override beanutils version from commons-validator with newer, non-vulnerable one -->
+        <commons.beanutils.version>1.11.0</commons.beanutils.version>
         <protobuf.version>3.25.5</protobuf.version>
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
         <kafka.version>3.6.1.200-eep-940-SNAPSHOT</kafka.version>
@@ -178,6 +180,12 @@
                 <groupId>commons-validator</groupId>
                 <artifactId>commons-validator</artifactId>
                 <version>${commons.validator.version}</version>
+            </dependency>
+            <!-- This is only to override beanutils version from commons-validator with newer, non-vulnerable one -->
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>${commons.beanutils.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
