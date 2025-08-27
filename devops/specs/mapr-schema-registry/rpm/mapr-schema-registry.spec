@@ -1,19 +1,19 @@
 %undefine __check_files
 
-summary:     Ezmeral Ecosystem Pack: Kafka Schema Registry
+summary:     HPE DataFabric Ecosystem Pack: Confluent Schema Registry
 license:     Hewlett Packard Enterprise, CopyRight
-Vendor:      Hewlett Packard Enterprise, <ezmeral_software_support@hpe.com>
+Vendor:      Hewlett Packard Enterprise
 name:        mapr-schema-registry
 version:     __RELEASE_VERSION__
 release:     1
 prefix:      /
-group:       MapR
+group:       HPE
 buildarch:   noarch
 requires:    mapr-schema-registry-internal = __RELEASE_VERSION__
 AutoReqProv: no
 
 %description
-Ezmeral Ecosystem Pack: Kafka Schema Registry package
+Confluent Schema Registry distribution included in HPE DataFabric Software Ecosystem Pack
 Tag: __RELEASE_BRANCH__
 Commit: __GIT_COMMIT__
 

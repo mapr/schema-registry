@@ -4,7 +4,7 @@ Section: base
 Priority: optional
 Architecture: all
 Depends: mapr-schema-registry-internal (>= __RELEASE_VERSION__)
-Maintainer: Hewlett Packard Enterprise <ezmeral_software_support@hpe.com>
-Description: Ezmeral Ecosystem Pack: Kafka Schema Registry package
+Maintainer: Hewlett Packard Enterprise
+Description: Confluent Schema Registry distribution included in HPE DataFabric Software Ecosystem Pack
   Tag: __RELEASE_BRANCH__
   Commit: __GIT_COMMIT__
