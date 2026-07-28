@@ -7,13 +7,13 @@
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>rest-utils-parent</artifactId>
-        <version>7.6.0.200-eep-940</version>
+        <version>7.6.0.210-eep-942-SNAPSHOT</version>
     </parent>
 
     <artifactId>kafka-schema-registry-parent</artifactId>
     <packaging>pom</packaging>
     <name>kafka-schema-registry-parent</name>
-    <version>7.6.0.300-eep-941-SNAPSHOT</version>
+    <version>7.6.0.310-eep-942-SNAPSHOT</version>
     <organization>
         <name>Confluent, Inc.</name>
         <url>http://confluent.io</url>
@@ -108,7 +108,8 @@
         <tink.gcp.kms.version>1.9.0</tink.gcp.kms.version>
         <wire.version>4.9.0</wire.version>
         <swagger.version>2.1.10</swagger.version>
-        <io.confluent.schema-registry.version>7.6.0.300-eep-941-SNAPSHOT</io.confluent.schema-registry.version>
+        <io.confluent.schema-registry.version>7.6.0.310-eep-942-SNAPSHOT</io.confluent.schema-registry.version>
+        <rest-utils.version>7.6.0.210-eep-942-SNAPSHOT</rest-utils.version>
         <commons.lang3.version>3.12.0</commons.lang3.version>
         <bouncycastle.jdk18.version>1.77</bouncycastle.jdk18.version>
         <commons.validator.version>1.7</commons.validator.version>
@@ -116,11 +117,11 @@
         <commons.beanutils.version>1.11.0</commons.beanutils.version>
         <protobuf.version>3.25.5</protobuf.version>
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
-        <kafka.version>3.6.1.200-eep-940-SNAPSHOT</kafka.version>
+        <kafka.version>3.6.1.210-eep-942-SNAPSHOT</kafka.version>
         <jackson.version>2.13.3</jackson.version>
         <jackson.databind.version>2.13.4.2</jackson.databind.version>
         <mapr.version>7.6.0.0-mapr</mapr.version>
-        <hadoop.version>3.4.1.100-eep-941-SNAPSHOT</hadoop.version>
+        <hadoop.version>3.4.1.125-eep-942-SNAPSHOT</hadoop.version>
         <avro.version>1.11.4</avro.version>
         <jose4j.version>0.9.6</jose4j.version>
         <classgraph.version>4.8.179</classgraph.version>
@@ -144,7 +145,7 @@
         </repository>
         <repository>
             <id>mapr</id>
-            <url>${env.MAPR_MAVEN_REPO}</url>
+	    <url>${env.MAPR_MAVEN_REPO}</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
@@ -447,7 +448,7 @@
             <dependency>
                 <groupId>io.confluent</groupId>
                 <artifactId>rest-utils</artifactId>
-                <version>7.6.0.200-eep-940</version>
+		<version>${rest-utils.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>
