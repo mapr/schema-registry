@@ -7,13 +7,13 @@
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>rest-utils-parent</artifactId>
-        <version>7.6.0.400-dep-1020-SNAPSHOT</version>
+        <version>7.6.0.400-dep-1020</version>
     </parent>
 
     <artifactId>kafka-schema-registry-parent</artifactId>
     <packaging>pom</packaging>
     <name>kafka-schema-registry-parent</name>
-    <version>7.6.0.500-dep-1020-SNAPSHOT</version>
+    <version>7.6.0.500-dep-1020</version>
     <organization>
         <name>Confluent, Inc.</name>
         <url>http://confluent.io</url>
@@ -108,8 +108,8 @@
         <tink.gcp.kms.version>1.9.0</tink.gcp.kms.version>
         <wire.version>6.4.5</wire.version>
         <swagger.version>2.1.10</swagger.version>
-        <io.confluent.schema-registry.version>7.6.0.500-dep-1020-SNAPSHOT</io.confluent.schema-registry.version>
-        <rest-utils.version>7.6.0.400-dep-1020-SNAPSHOT</rest-utils.version>
+        <io.confluent.schema-registry.version>7.6.0.500-dep-1020</io.confluent.schema-registry.version>
+        <rest-utils.version>7.6.0.400-dep-1020</rest-utils.version>
         <commons.lang3.version>3.20.0</commons.lang3.version>
         <bouncycastle.jdk18.version>1.77</bouncycastle.jdk18.version>
         <commons.validator.version>1.7</commons.validator.version>
@@ -117,17 +117,17 @@
         <commons.beanutils.version>1.11.0</commons.beanutils.version>
         <protobuf.version>3.25.5</protobuf.version>
         <spotbugs.plugin.version>4.0.0</spotbugs.plugin.version>
-        <kafka.version>3.6.1.400-dep-1020-SNAPSHOT</kafka.version>
+        <kafka.version>3.6.1.400-dep-1020</kafka.version>
         <jackson.version>2.22.1</jackson.version>
         <jackson.databind.version>2.22.1</jackson.databind.version>
         <jackson.annotations.version>2.22</jackson.annotations.version>
         <mapr.version>7.6.0.0-mapr</mapr.version>
-        <hadoop.version>3.4.1.500-dep-1020-SNAPSHOT</hadoop.version>
+        <hadoop.version>3.4.1.500-dep-1020</hadoop.version>
         <avro.version>1.11.5</avro.version>
         <netty.version>4.1.136.Final</netty.version>
         <jose4j.version>0.9.6</jose4j.version>
         <classgraph.version>4.8.179</classgraph.version>
-        <zookeeper.version>3.5.6-mapr-SNAPSHOT</zookeeper.version>
+        <zookeeper.version>3.5.6.0-mapr-2210</zookeeper.version>
         <slf4j.version>1.7.36</slf4j.version>
         <junit.version>4.13.2</junit.version>
         <junit.integration.categories>
